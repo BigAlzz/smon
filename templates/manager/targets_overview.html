@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Targets Overview - Manager{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Targets Overview</h1>
+      <p class="text-muted mb-0">All targets requiring your attention</p>
+    </div>
+    <div class="btn-group" role="group">
+      <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-primary">
+        <i class="bi bi-speedometer2"></i> Manager Dashboard
+      </a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-house"></i> Main Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card text-center border-danger">
+        <div class="card-body">
+          <h4 class="card-title text-danger">{{ overdue_targets|length }}</h4>
+          <p class="card-text small text-muted">Overdue Updates</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center border-warning">
+        <div class="card-body">
+          <h4 class="card-title text-warning">{{ due_soon_targets|length }}</h4>
+          <p class="card-text small text-muted">Due Soon</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center border-success">
+        <div class="card-body">
+          <h4 class="card-title text-success">{{ on_track_targets|length }}</h4>
+          <p class="card-text small text-muted">On Track</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overdue Targets -->
+  {% if overdue_targets %}
+    <div class="card mb-4">
+      <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-exclamation-triangle"></i> Overdue Updates ({{ overdue_targets|length }})
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {% for target_info in overdue_targets %}
+            <div class="col-lg-6 mb-3">
+              <div class="card border-start border-danger border-3">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="mb-1">{{ target_info.target.name }}</h6>
+                      <small class="text-muted">{{ target_info.target.plan_item.kpa.title }}</small>
+                    </div>
+                    <span class="badge bg-danger">OVERDUE</span>
+                  </div>
+                  
+                  <div class="mb-2">
+                    <small class="text-muted">Target: {{ target_info.target.value }} {{ target_info.target.get_unit_display }}</small>
+                    {% if target_info.latest_update %}
+                      <br><small class="text-muted">Last Update: {{ target_info.latest_update.period_name }}</small>
+                    {% else %}
+                      <br><small class="text-muted">No updates yet</small>
+                    {% endif %}
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                      Due: {{ target_info.target.due_date|date:"M d, Y"|default:"Not specified" }}
+                    </small>
+                    {% if target_info.can_edit %}
+                      <a href="{% url 'manager_progress_update' target_info.target.id %}" 
+                         class="btn btn-sm btn-danger">
+                        <i class="bi bi-plus"></i> Update Now
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Due Soon Targets -->
+  {% if due_soon_targets %}
+    <div class="card mb-4">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+          <i class="bi bi-clock"></i> Due Soon ({{ due_soon_targets|length }})
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {% for target_info in due_soon_targets %}
+            <div class="col-lg-6 mb-3">
+              <div class="card border-start border-warning border-3">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="mb-1">{{ target_info.target.name }}</h6>
+                      <small class="text-muted">{{ target_info.target.plan_item.kpa.title }}</small>
+                    </div>
+                    <span class="badge 
+                                {% if target_info.rag_status == 'GREEN' %}bg-success
+                                {% elif target_info.rag_status == 'AMBER' %}bg-warning
+                                {% elif target_info.rag_status == 'RED' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                      {{ target_info.rag_status }}
+                    </span>
+                  </div>
+                  
+                  <div class="mb-2">
+                    <small class="text-muted">Target: {{ target_info.target.value }} {{ target_info.target.get_unit_display }}</small>
+                    {% if target_info.latest_update %}
+                      <br><small class="text-muted">Latest: {{ target_info.latest_update.actual_value }} ({{ target_info.latest_update.period_name }})</small>
+                    {% endif %}
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                      Due: {{ target_info.target.due_date|date:"M d, Y" }}
+                    </small>
+                    {% if target_info.can_edit %}
+                      <a href="{% url 'manager_progress_update' target_info.target.id %}" 
+                         class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus"></i> Update
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- On Track Targets -->
+  {% if on_track_targets %}
+    <div class="card">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-check-circle"></i> On Track ({{ on_track_targets|length }})
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          {% for target_info in on_track_targets %}
+            <div class="col-lg-6 mb-3">
+              <div class="card border-start border-success border-3">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 class="mb-1">{{ target_info.target.name }}</h6>
+                      <small class="text-muted">{{ target_info.target.plan_item.kpa.title }}</small>
+                    </div>
+                    <span class="badge 
+                                {% if target_info.rag_status == 'GREEN' %}bg-success
+                                {% elif target_info.rag_status == 'AMBER' %}bg-warning
+                                {% elif target_info.rag_status == 'RED' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                      {{ target_info.rag_status }}
+                    </span>
+                  </div>
+                  
+                  <div class="mb-2">
+                    <small class="text-muted">Target: {{ target_info.target.value }} {{ target_info.target.get_unit_display }}</small>
+                    {% if target_info.latest_update %}
+                      <br><small class="text-muted">Latest: {{ target_info.latest_update.actual_value }} ({{ target_info.latest_update.period_name }})</small>
+                    {% endif %}
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                      Due: {{ target_info.target.due_date|date:"M d, Y"|default:"Not specified" }}
+                    </small>
+                    {% if target_info.can_edit %}
+                      <a href="{% url 'manager_progress_update' target_info.target.id %}" 
+                         class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-plus"></i> Update
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- No Targets Message -->
+  {% if not overdue_targets and not due_soon_targets and not on_track_targets %}
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-target display-1 text-muted"></i>
+        <h5 class="mt-3">No Targets Found</h5>
+        <p class="text-muted">You don't have any targets assigned to you yet.</p>
+        <a href="{% url 'manager_dashboard' %}" class="btn btn-primary">
+          <i class="bi bi-speedometer2"></i> Go to Manager Dashboard
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.border-start {
+  border-left-width: 4px !important;
+}
+</style>
+{% endblock %}

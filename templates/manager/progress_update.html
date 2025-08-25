@@ -1,0 +1,721 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Update Progress - {{ target.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_dashboard' %}">Manager Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_kpa_detail' target.plan_item.kpa.id %}">{{ target.plan_item.kpa.title }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Update Progress</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Progress Update Form -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="bi bi-target"></i> Update Progress
+            {% if is_new %}
+              <span class="badge bg-success ms-2">New</span>
+            {% else %}
+              <span class="badge bg-info ms-2">Edit</span>
+            {% endif %}
+          </h5>
+        </div>
+        <div class="card-body">
+          <form method="post" id="progress-form">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="progress">
+            
+            <!-- Target Information -->
+            <div class="alert alert-info">
+              <h6 class="alert-heading">{{ target.name }}</h6>
+              <p class="mb-1">{{ target.plan_item.output }}</p>
+              <small class="text-muted">
+                Target: {{ target.value }} {{ target.get_unit_display }} •
+                Due: {{ target.due_date|date:"M d, Y"|default:"Not specified" }}
+              </small>
+            </div>
+
+            <!-- Previous Update Context -->
+            {% if previous_update and is_new %}
+              <div class="alert alert-light border">
+                <h6 class="alert-heading">
+                  <i class="bi bi-clock-history"></i> Previous Update Context
+                  <small class="text-muted">({{ previous_update.period_name }})</small>
+                </h6>
+                <div class="row">
+                  <div class="col-md-6">
+                    <small class="text-muted d-block">Previous Value:</small>
+                    <strong>{{ previous_update.actual_value }} {{ target.get_unit_display }}</strong>
+                    <span class="badge bg-{{ previous_update.rag_status|lower }} ms-2">{{ previous_update.rag_status }}</span>
+                  </div>
+                  <div class="col-md-6">
+                    <small class="text-muted d-block">Risk Rating:</small>
+                    <strong>{{ previous_update.get_risk_rating_display|default:"Not specified" }}</strong>
+                  </div>
+                </div>
+                {% if previous_update.narrative %}
+                  <div class="mt-2">
+                    <small class="text-muted d-block">Previous Narrative:</small>
+                    <small class="text-dark">{{ previous_update.narrative|truncatewords:20 }}</small>
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            <div class="row g-3">
+              <!-- Period Information -->
+              <div class="col-md-4">
+                <label class="form-label">Period Type</label>
+                {{ form.period_type }}
+                {% if form.period_type.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_type.errors.0 }}</div>
+                {% endif %}
+                {% if form.period_type.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_type.errors.0 }}</div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-4">
+                <label class="form-label">Period Start</label>
+                {{ form.period_start }}
+                {% if form.period_start.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_start.errors.0 }}</div>
+                {% endif %}
+                {% if form.period_start.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_start.errors.0 }}</div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-4">
+                <label class="form-label">Period End</label>
+                {{ form.period_end }}
+                {% if form.period_end.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_end.errors.0 }}</div>
+                {% endif %}
+                {% if form.period_end.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_end.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">Period Name</label>
+                {{ form.period_name }}
+                {% if form.period_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.period_name.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <!-- Progress Data -->
+              <div class="col-md-6">
+                <label class="form-label required">Actual Value</label>
+                <div class="input-group">
+                  {{ form.actual_value }}
+                  <span class="input-group-text">{{ target.get_unit_display }}</span>
+                </div>
+                {% if form.actual_value.errors %}
+                  <div class="invalid-feedback d-block">{{ form.actual_value.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">Target: {{ target.value }} {{ target.get_unit_display }}</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Risk Rating</label>
+                {{ form.risk_rating }}
+                {% if form.risk_rating.errors %}
+                  <div class="invalid-feedback d-block">{{ form.risk_rating.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <!-- Narrative -->
+              <div class="col-12">
+                <label class="form-label required">Progress Narrative</label>
+                {{ form.narrative }}
+                {% if form.narrative.errors %}
+                  <div class="invalid-feedback d-block">{{ form.narrative.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">Explain what was achieved, challenges faced, and key milestones reached.</div>
+              </div>
+
+              <!-- Issues and Actions -->
+              <div class="col-md-6">
+                <label class="form-label">Issues & Challenges</label>
+                {{ form.issues }}
+                {% if form.issues.errors %}
+                  <div class="invalid-feedback d-block">{{ form.issues.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Corrective Actions</label>
+                {{ form.corrective_actions }}
+                {% if form.corrective_actions.errors %}
+                  <div class="invalid-feedback d-block">{{ form.corrective_actions.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <!-- Evidence -->
+              <div class="col-12">
+                <label class="form-label">Evidence URLs</label>
+                {{ form.evidence_urls }}
+                {% if form.evidence_urls.errors %}
+                  <div class="invalid-feedback d-block">{{ form.evidence_urls.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">Provide links to supporting documents, reports, or evidence (one per line).</div>
+              </div>
+
+              <!-- Forecast -->
+              <div class="col-md-6">
+                <label class="form-label">Forecast Value</label>
+                <div class="input-group">
+                  {{ form.forecast_value }}
+                  <span class="input-group-text">{{ target.get_unit_display }}</span>
+                </div>
+                {% if form.forecast_value.errors %}
+                  <div class="invalid-feedback d-block">{{ form.forecast_value.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">Expected final achievement by target due date.</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Forecast Confidence</label>
+                {{ form.forecast_confidence }}
+                {% if form.forecast_confidence.errors %}
+                  <div class="invalid-feedback d-block">{{ form.forecast_confidence.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">Your confidence level in achieving the forecast value.</div>
+              </div>
+
+              <!-- Submission -->
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form.is_submitted }}
+                  <label class="form-check-label" for="{{ form.is_submitted.id_for_label }}">
+                    Submit for approval
+                  </label>
+                </div>
+                <div class="form-text">Check this box to submit the update for management approval.</div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-between mt-4">
+              <a href="{% url 'manager_kpa_detail' target.plan_item.kpa.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to KPA
+              </a>
+              <div>
+                <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary" id="save-draft-btn">
+                  <i class="bi bi-save"></i> Save Draft
+                </button>
+                <button type="submit" name="action" value="save_submit" class="btn btn-primary" id="save-submit-btn">
+                  <i class="bi bi-check-circle"></i> Save & Submit
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Evidence Upload Section -->
+      <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-paperclip"></i> Evidence & Supporting Documents
+            {% if evidence_required %}
+              <span class="badge bg-warning text-dark ms-2">Required</span>
+            {% endif %}
+          </h5>
+          <small class="text-muted">{{ evidence_files.count }} file(s), {{ evidence_urls|length }} URL(s)</small>
+        </div>
+        <div class="card-body">
+          {% if evidence_required %}
+            <div class="alert alert-warning border-warning">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                <div>
+                  <h6 class="alert-heading mb-1">Evidence Required</h6>
+                  <p class="mb-0">This target has sustained Amber/Red status and requires supporting evidence to demonstrate progress and corrective actions taken.</p>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- File Upload Form -->
+          <div class="mb-4">
+            <h6 class="border-bottom pb-2 mb-3">Upload Files</h6>
+            <form method="post" enctype="multipart/form-data" class="mb-3">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="evidence_file">
+
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label">Evidence File</label>
+                  {{ evidence_file_form.file }}
+                  {% if evidence_file_form.file.errors %}
+                    <div class="invalid-feedback d-block">{{ evidence_file_form.file.errors.0 }}</div>
+                  {% endif %}
+                  <div class="form-text">{{ evidence_file_form.file.help_text }}</div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Description</label>
+                  {{ evidence_file_form.description }}
+                  {% if evidence_file_form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ evidence_file_form.description.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <button type="submit" class="btn btn-success">
+                  <i class="bi bi-upload"></i> Upload File
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- URL Form -->
+          <div class="mb-4">
+            <h6 class="border-bottom pb-2 mb-3">Add Evidence URL</h6>
+            <form method="post" class="mb-3">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="evidence_url">
+
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label">Evidence URL</label>
+                  {{ evidence_url_form.url }}
+                  {% if evidence_url_form.url.errors %}
+                    <div class="invalid-feedback d-block">{{ evidence_url_form.url.errors.0 }}</div>
+                  {% endif %}
+                  <div class="form-text">{{ evidence_url_form.url.help_text }}</div>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Description</label>
+                  {{ evidence_url_form.description }}
+                  {% if evidence_url_form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ evidence_url_form.description.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <button type="submit" class="btn btn-info">
+                  <i class="bi bi-link-45deg"></i> Add URL
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Existing Evidence Files -->
+          {% if evidence_files %}
+            <div class="mb-4">
+              <h6 class="border-bottom pb-2 mb-3">Uploaded Files</h6>
+              <div class="list-group">
+                {% for file in evidence_files %}
+                  <div class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                      <div class="fw-bold">
+                        <i class="{{ file.file_icon }} text-primary"></i>
+                        {{ file.original_filename }}
+                      </div>
+                      {% if file.description %}
+                        <p class="mb-1 small text-muted">{{ file.description }}</p>
+                      {% endif %}
+                      <small class="text-muted">
+                        {{ file.file_size_mb }}MB •
+                        Uploaded by {{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }} •
+                        {{ file.uploaded_at|date:"M d, Y H:i" }}
+                      </small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                      <a href="{{ file.file.url }}" target="_blank" class="btn btn-outline-primary">
+                        <i class="bi bi-download"></i> Download
+                      </a>
+                      <a href="{% url 'manager_evidence_delete' file.id %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete
+                      </a>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Existing Evidence URLs -->
+          {% if evidence_urls %}
+            <div class="mb-4">
+              <h6 class="border-bottom pb-2 mb-3">Evidence URLs</h6>
+              <div class="list-group">
+                {% for url_item in evidence_urls %}
+                  <div class="list-group-item d-flex justify-content-between align-items-start">
+                    <div class="ms-2 me-auto">
+                      <div class="fw-bold">
+                        <i class="bi bi-link-45deg text-info"></i>
+                        <a href="{{ url_item.url }}" target="_blank" class="text-decoration-none">
+                          {{ url_item.description|default:"External Link" }}
+                        </a>
+                      </div>
+                      <small class="text-muted">
+                        {{ url_item.url|truncatechars:60 }} •
+                        Added by {{ url_item.added_by|default:"Unknown" }}
+                        {% if url_item.added_at %} • {{ url_item.added_at|date:"M d, Y H:i" }}{% endif %}
+                      </small>
+                    </div>
+                    <a href="{{ url_item.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-box-arrow-up-right"></i> Open
+                    </a>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          {% if not evidence_files and not evidence_urls %}
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-paperclip display-4"></i>
+              <p class="mt-2">No evidence uploaded yet</p>
+              <small>Upload files or add URLs to support your progress update</small>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Target Details -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-info-circle"></i> Target Details</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <small class="text-muted">Target Name:</small>
+            <div>{{ target.name }}</div>
+          </div>
+          
+          <div class="mb-3">
+            <small class="text-muted">Target Value:</small>
+            <div>{{ target.value }} {{ target.get_unit_display }}</div>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted">Baseline:</small>
+            <div>{{ target.baseline|default:"Not specified" }}</div>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted">Due Date:</small>
+            <div>{{ target.due_date|date:"M d, Y"|default:"Not specified" }}</div>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted">Reporting Frequency:</small>
+            <div>{{ target.get_periodicity_display }}</div>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted">Thresholds:</small>
+            <div class="small">
+              <span class="text-success">Green: ≥{{ target.green_threshold }}%</span><br>
+              <span class="text-warning">Amber: ≥{{ target.amber_threshold }}%</span><br>
+              <span class="text-danger">Red: <{{ target.amber_threshold }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress History -->
+      {% if target.progress_updates.exists %}
+        <div class="card mt-3">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Progress History</h5>
+          </div>
+          <div class="card-body">
+            {% for update in target.progress_updates.all|slice:":5" %}
+              <div class="border-bottom pb-2 mb-2">
+                <div class="d-flex justify-content-between">
+                  <strong>{{ update.period_name }}</strong>
+                  <span class="badge bg-primary">{{ update.actual_value }}</span>
+                </div>
+                <small class="text-muted">{{ update.updated_at|date:"M d, Y" }}</small>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Auto-calculate progress percentage
+  const actualValueInput = document.getElementById('id_actual_value');
+  const targetValue = {{ target.value }};
+  
+  if (actualValueInput) {
+    actualValueInput.addEventListener('input', function() {
+      const actual = parseFloat(this.value) || 0;
+      const percentage = targetValue > 0 ? (actual / targetValue * 100).toFixed(1) : 0;
+      
+      // Update any progress indicators
+      const progressText = document.querySelector('.progress-text');
+      if (progressText) {
+        progressText.textContent = `${percentage}% of target`;
+      }
+    });
+  }
+
+  // Handle form submission with loading states and confirmation
+  const form = document.getElementById('progress-form');
+  const submitButtons = form.querySelectorAll('button[type="submit"]');
+  const saveDraftBtn = document.getElementById('save-draft-btn');
+  const saveSubmitBtn = document.getElementById('save-submit-btn');
+
+  submitButtons.forEach(button => {
+    button.addEventListener('click', function(e) {
+      if (this.name === 'action' && this.value === 'save_submit') {
+        document.getElementById('id_is_submitted').checked = true;
+
+        // Enhanced confirmation dialog for submission
+        const confirmModal = document.createElement('div');
+        confirmModal.innerHTML = `
+          <div class="modal fade" id="submitConfirmModal" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                  <h5 class="modal-title">
+                    <i class="bi bi-check-circle me-2"></i>Confirm Progress Submission
+                  </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>You are about to submit this progress update for approval.</strong>
+                  </div>
+                  <p>Once submitted:</p>
+                  <ul>
+                    <li>✅ Your progress will be reviewed by senior management</li>
+                    <li>📧 Approvers will be notified automatically</li>
+                    <li>🔒 You won't be able to edit until approved/rejected</li>
+                    <li>📊 The data will be included in reports</li>
+                  </ul>
+                  <p class="mb-0"><strong>Are you sure you want to proceed?</strong></p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                  </button>
+                  <button type="button" class="btn btn-primary" id="confirmSubmit">
+                    <i class="bi bi-check-circle me-1"></i>Yes, Submit for Approval
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(confirmModal);
+        const modal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
+        modal.show();
+
+        // Handle confirmation
+        document.getElementById('confirmSubmit').addEventListener('click', () => {
+          modal.hide();
+          proceedWithSubmission(this);
+        });
+
+        // Clean up modal after hiding
+        document.getElementById('submitConfirmModal').addEventListener('hidden.bs.modal', () => {
+          document.body.removeChild(confirmModal);
+        });
+
+        e.preventDefault();
+        return;
+      } else {
+        proceedWithSubmission(this);
+      }
+    });
+  });
+
+  function proceedWithSubmission(button) {
+    // Show loading state
+    const originalText = button.innerHTML;
+    const isSubmit = button.value === 'save_submit';
+
+    button.disabled = true;
+    button.innerHTML = isSubmit
+      ? '<i class="bi bi-hourglass-split spinner-border spinner-border-sm me-2"></i>Submitting for Approval...'
+      : '<i class="bi bi-hourglass-split spinner-border spinner-border-sm me-2"></i>Saving Draft...';
+
+    // Add visual feedback to the entire form
+    const form = document.getElementById('progress-form');
+    form.style.opacity = '0.7';
+    form.style.pointerEvents = 'none';
+
+    // Show processing overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'processing-overlay';
+    overlay.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center">
+          <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+          <h5>${isSubmit ? 'Submitting Progress Update...' : 'Saving Draft...'}</h5>
+          <p class="text-muted">Please wait while we process your request.</p>
+        </div>
+      </div>
+    `;
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.9); z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+    `;
+    document.body.appendChild(overlay);
+
+    // Submit the form
+    setTimeout(() => {
+      form.submit();
+    }, 500);
+
+    // Fallback cleanup after 15 seconds
+    setTimeout(() => {
+      if (document.getElementById('processing-overlay')) {
+        document.body.removeChild(overlay);
+      }
+      button.disabled = false;
+      button.innerHTML = originalText;
+      form.style.opacity = '1';
+      form.style.pointerEvents = 'auto';
+    }, 15000);
+  }
+
+  // Add visual feedback for form validation
+  form.addEventListener('submit', function(e) {
+    const requiredFields = form.querySelectorAll('[required]');
+    let hasErrors = false;
+
+    requiredFields.forEach(field => {
+      if (!field.value.trim()) {
+        field.classList.add('is-invalid');
+        hasErrors = true;
+      } else {
+        field.classList.remove('is-invalid');
+      }
+    });
+
+    if (hasErrors) {
+      e.preventDefault();
+      // Show error message
+      const errorAlert = document.createElement('div');
+      errorAlert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+      errorAlert.innerHTML = `
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Please fill in all required fields before submitting.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      form.insertBefore(errorAlert, form.firstChild);
+
+      // Re-enable buttons
+      submitButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.innerHTML = btn.value === 'save_submit'
+          ? '<i class="bi bi-check-circle"></i> Save & Submit'
+          : '<i class="bi bi-save"></i> Save Draft';
+      });
+    }
+  });
+});
+</script>
+
+<style>
+/* Custom styling for progress update form */
+.form-control, .form-select {
+  border-radius: 0.375rem;
+  border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.alert-light {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+.badge.bg-green {
+  background-color: #28a745 !important;
+}
+
+.badge.bg-amber {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.badge.bg-red {
+  background-color: #dc3545 !important;
+}
+
+.badge.bg-grey {
+  background-color: #6c757d !important;
+}
+
+/* Evidence section styling */
+.list-group-item {
+  border: 1px solid rgba(0,0,0,.125);
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.list-group-item:last-child {
+  margin-bottom: 0;
+}
+
+/* File upload styling */
+input[type="file"] {
+  border: 2px dashed #dee2e6;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+}
+
+input[type="file"]:hover {
+  border-color: #86b7fe;
+  background-color: #e7f1ff;
+}
+
+/* Form validation styling */
+.invalid-feedback {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+  color: #dc3545;
+}
+
+/* Previous update context styling */
+.alert-light .badge {
+  font-size: 0.75em;
+}
+
+/* Button styling improvements */
+.btn-group-sm > .btn, .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+}
+</style>
+{% endblock %}

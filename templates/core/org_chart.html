@@ -1,0 +1,837 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organizational Chart{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h4 mb-0">Organizational Chart</h1>
+    <small class="text-muted">Interactive organizational structure visualization</small>
+  </div>
+  <div class="d-flex gap-2">
+    <div class="input-group" style="max-width: 300px;">
+      <input type="text" class="form-control form-control-sm" id="search-input" placeholder="Search units...">
+      <button class="btn btn-outline-secondary btn-sm" type="button" id="clear-search">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+    <div class="btn-group" role="group">
+      <button type="button" class="btn btn-outline-primary btn-sm" id="expand-all">
+        <i class="bi bi-arrows-expand"></i> Expand All
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="collapse-all">
+        <i class="bi bi-arrows-collapse"></i> Collapse All
+      </button>
+      <button type="button" class="btn btn-outline-info btn-sm" id="refresh-chart">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-3">
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <h6 class="card-title text-danger mb-1" id="ceo-count">0</h6>
+        <small class="text-muted">CEO Office</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <h6 class="card-title text-primary mb-1" id="chief-count">0</h6>
+        <small class="text-muted">Chief Directorates</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <h6 class="card-title text-success mb-1" id="dir-count">0</h6>
+        <small class="text-muted">Directorates</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-2">
+        <h6 class="card-title text-warning mb-1" id="sub-count">0</h6>
+        <small class="text-muted">Sub-Directorates</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart Controls -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-outline-secondary" id="zoom-in">
+          <i class="bi bi-zoom-in"></i> Zoom In
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="zoom-out">
+          <i class="bi bi-zoom-out"></i> Zoom Out
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="reset-view">
+          <i class="bi bi-arrows-move"></i> Reset View
+        </button>
+      </div>
+      <small class="text-muted">
+        <i class="bi bi-info-circle"></i> Drag to pan • Scroll to zoom • Click units for details
+      </small>
+    </div>
+  </div>
+</div>
+
+<!-- Main Chart Container -->
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div id="org-chart-container" style="min-height: 600px; background: #f8f9fa; overflow: hidden; position: relative; cursor: grab;">
+      <div id="loading" class="d-flex justify-content-center align-items-center h-100" style="min-height: 600px;">
+        <div class="text-center">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted">Loading organizational structure...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Clean Organizational Chart Styles */
+.org-chart {
+    padding: 30px 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.org-level {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 25px 0;
+    flex-wrap: nowrap;
+    gap: 15px;
+    min-width: fit-content;
+}
+
+.org-level.directorate-level {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 0 20px;
+    min-width: 1200px;
+}
+
+.org-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.org-box {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px 20px;
+    min-width: 160px;
+    max-width: 200px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    margin: 5px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.org-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: #007bff;
+    cursor: pointer;
+}
+
+.org-box:hover .org-title {
+    color: #007bff;
+}
+
+.org-box:hover .staff-count .badge {
+    transform: scale(1.05);
+}
+
+.org-box.search-highlight {
+    border-color: #ffc107 !important;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffffff 100%) !important;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3) !important;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.org-box.ceo-office {
+    border-left: 4px solid #dc3545;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+}
+
+.org-box.chief-directorate {
+    border-left: 4px solid #0d6efd;
+    background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
+}
+
+.org-box.directorate {
+    border-left: 4px solid #198754;
+    background: linear-gradient(135deg, #f0fff4 0%, #ffffff 100%);
+}
+
+.org-box.sub-directorate {
+    border-left: 4px solid #fd7e14;
+    background: linear-gradient(135deg, #fff8f0 0%, #ffffff 100%);
+}
+
+.org-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 5px;
+    line-height: 1.3;
+}
+
+.org-subtitle {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.staff-count {
+    margin-top: 8px;
+    text-align: center;
+}
+
+.staff-count .badge {
+    font-size: 10px;
+    padding: 3px 6px;
+}
+
+.staff-breakdown {
+    margin-top: 2px;
+}
+
+.staff-breakdown small {
+    font-size: 9px;
+    display: block;
+}
+
+.expand-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.expand-btn:hover {
+    background: #0056b3;
+    transform: scale(1.1);
+}
+
+.clickable-indicator {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: #007bff;
+    font-size: 12px;
+}
+
+.org-box:hover .clickable-indicator {
+    opacity: 1;
+}
+
+.children-container {
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+.children-container.collapsed {
+    display: none;
+}
+
+/* Connection lines */
+.org-node::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: #dee2e6;
+    transform: translateX(-50%);
+}
+
+.org-level:first-child .org-node::before {
+    display: none;
+}
+
+/* Level-specific styling */
+.org-level.ceo-level {
+    justify-content: center;
+}
+
+.org-level.chief-level {
+    justify-content: center;
+    gap: 30px;
+}
+
+.org-level.directorate-level {
+    justify-content: flex-start;
+    gap: 20px;
+    padding: 0 20px;
+    min-width: 1400px;
+}
+
+.org-level.sub-level {
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Horizontal scroll indicator */
+.org-chart::after {
+    content: "← Scroll horizontally to see all units →";
+    display: block;
+    text-align: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .org-level.directorate-level {
+        min-width: 800px;
+        gap: 15px;
+        padding: 0 10px;
+    }
+
+    .org-box {
+        min-width: 140px;
+        max-width: 180px;
+        padding: 12px 15px;
+    }
+
+    .org-title {
+        font-size: 12px;
+    }
+
+    .org-subtitle {
+        font-size: 10px;
+    }
+}
+</style>
+
+<script>
+// Simple, reliable organizational chart implementation
+(function() {
+    'use strict';
+    
+    let orgData = [];
+    let expandedNodes = new Set();
+    let currentZoom = 1;
+    let currentPan = { x: 0, y: 0 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let chartContainer = null;
+    
+    function init() {
+        console.log('Initializing organizational chart...');
+        loadData();
+        
+        // Event listeners
+        document.getElementById('expand-all').addEventListener('click', expandAll);
+        document.getElementById('collapse-all').addEventListener('click', collapseAll);
+        document.getElementById('refresh-chart').addEventListener('click', loadData);
+        document.getElementById('search-input').addEventListener('input', handleSearch);
+        document.getElementById('clear-search').addEventListener('click', clearSearch);
+
+        // Zoom and pan controls
+        document.getElementById('zoom-in').addEventListener('click', () => zoomChart(1.2));
+        document.getElementById('zoom-out').addEventListener('click', () => zoomChart(0.8));
+        document.getElementById('reset-view').addEventListener('click', resetView);
+
+        // Initialize drag and zoom
+        initializeDragAndZoom();
+    }
+    
+    function loadData() {
+        console.log('Loading organizational data...');
+        showLoading(true);
+        
+        fetch('/org-chart/data/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data loaded successfully:', data);
+                if (data.success) {
+                    orgData = data.data;
+                    updateStatistics(data.data);
+                    renderChart(data.data);
+                } else {
+                    showError('Failed to load organizational data');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                showError('Error loading organizational chart: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    function showLoading(show) {
+        const loading = document.getElementById('loading');
+        if (loading) {
+            loading.style.display = show ? 'flex' : 'none';
+        }
+    }
+    
+    function showError(message) {
+        const container = document.getElementById('org-chart-container');
+        container.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center h-100" style="min-height: 400px;">
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle"></i> ${message}
+                    <br><button class="btn btn-sm btn-outline-danger mt-2" onclick="location.reload()">Retry</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    function updateStatistics(data) {
+        const stats = { CEO_OFFICE: 0, CHIEF_DIRECTORATE: 0, DIRECTORATE: 0, SUB_DIRECTORATE: 0 };
+        
+        function countNodes(nodes) {
+            nodes.forEach(node => {
+                stats[node.type] = (stats[node.type] || 0) + 1;
+                if (node.children) {
+                    countNodes(node.children);
+                }
+            });
+        }
+        
+        countNodes(data);
+        
+        document.getElementById('ceo-count').textContent = stats.CEO_OFFICE || 0;
+        document.getElementById('chief-count').textContent = stats.CHIEF_DIRECTORATE || 0;
+        document.getElementById('dir-count').textContent = stats.DIRECTORATE || 0;
+        document.getElementById('sub-count').textContent = stats.SUB_DIRECTORATE || 0;
+    }
+    
+    function renderChart(data) {
+        const container = document.getElementById('org-chart-container');
+
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center h-100" style="min-height: 400px;">
+                    <div class="text-center">
+                        <i class="bi bi-building display-1 text-muted"></i>
+                        <h5 class="mt-3">No Organizational Units Found</h5>
+                        <p class="text-muted">Add organizational units in the admin to see the chart.</p>
+                        <a href="/admin/core/orgunit/" class="btn btn-primary">Manage Org Units</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="org-chart" id="org-chart-content" style="transform: scale(${currentZoom}) translate(${currentPan.x}px, ${currentPan.y}px); transform-origin: 0 0; transition: transform 0.3s ease;">
+                <div class="text-center mb-3">
+                    <h5 class="text-muted">Organizational Structure</h5>
+                    <small class="text-muted">All Directorates are displayed on the same level • Drag to pan • Scroll to zoom</small>
+                </div>
+                <div class="org-tree">
+                    ${renderLevel(data, 0)}
+                </div>
+            </div>
+        `;
+
+        // Re-initialize drag and zoom after rendering
+        initializeDragAndZoom();
+    }
+    
+    function renderLevel(nodes, level) {
+        if (!nodes || nodes.length === 0) return '';
+
+        // Group nodes by type for special handling
+        const groupedNodes = groupNodesByType(nodes);
+        let html = '';
+
+        // Render CEO Office first
+        if (groupedNodes.CEO_OFFICE && groupedNodes.CEO_OFFICE.length > 0) {
+            html += renderNodeGroup(groupedNodes.CEO_OFFICE, level, 'ceo-level');
+        }
+
+        // Render Chief Directorates
+        if (groupedNodes.CHIEF_DIRECTORATE && groupedNodes.CHIEF_DIRECTORATE.length > 0) {
+            html += renderNodeGroup(groupedNodes.CHIEF_DIRECTORATE, level, 'chief-level');
+        }
+
+        // Collect all Directorates (including those under Chief Directorates and standalone ones)
+        let allDirectorates = [];
+
+        // Add standalone Directorates
+        if (groupedNodes.DIRECTORATE && groupedNodes.DIRECTORATE.length > 0) {
+            allDirectorates = [...groupedNodes.DIRECTORATE];
+        }
+
+        // Add Directorates from Chief Directorates
+        if (groupedNodes.CHIEF_DIRECTORATE) {
+            groupedNodes.CHIEF_DIRECTORATE.forEach(chief => {
+                if (chief.children) {
+                    chief.children.forEach(child => {
+                        if (child.type === 'DIRECTORATE') {
+                            allDirectorates.push(child);
+                        }
+                    });
+                }
+            });
+        }
+
+        // Render all Directorates on the same level
+        if (allDirectorates.length > 0) {
+            html += renderNodeGroup(allDirectorates, level, 'directorate-level');
+        }
+
+        // Render Sub-Directorates
+        if (groupedNodes.SUB_DIRECTORATE && groupedNodes.SUB_DIRECTORATE.length > 0) {
+            html += renderNodeGroup(groupedNodes.SUB_DIRECTORATE, level, 'sub-level');
+        }
+
+        return html;
+    }
+
+    function groupNodesByType(nodes) {
+        const groups = {};
+        nodes.forEach(node => {
+            if (!groups[node.type]) {
+                groups[node.type] = [];
+            }
+            groups[node.type].push(node);
+        });
+        return groups;
+    }
+
+    function renderNodeGroup(nodes, level, levelClass = '') {
+        let html = `<div class="org-level ${levelClass}">`;
+
+        nodes.forEach(node => {
+            const hasChildren = node.children && node.children.length > 0;
+            const isExpanded = expandedNodes.has(node.id);
+            const cssClass = getNodeClass(node.type);
+
+            // Create tooltip content
+            let tooltipContent = `${node.name} (${node.type_display})`;
+            if (node.staff_breakdown) {
+                tooltipContent += `\nStaff: ${node.staff_breakdown.total} total`;
+                tooltipContent += `\n• Permanent: ${node.staff_breakdown.permanent}`;
+                tooltipContent += `\n• Contract: ${node.staff_breakdown.contract}`;
+                tooltipContent += `\n• Managers: ${node.staff_breakdown.managers}`;
+            }
+            tooltipContent += `\nClick to view details`;
+
+            html += `<div class="org-node" data-node-id="${node.id}">`;
+            html += `<div class="org-box ${cssClass}" onclick="openUnitDetail('${node.id}')" title="${tooltipContent}">`;
+            html += `<div class="org-title">${node.name}</div>`;
+            html += `<div class="org-subtitle">${node.type_display}</div>`;
+
+            // Add staff count display
+            if (node.staff_count !== undefined) {
+                const staffColor = node.staff_count > 10 ? 'success' : node.staff_count > 5 ? 'warning' : 'secondary';
+                html += `<div class="staff-count">`;
+                html += `<span class="badge bg-${staffColor}">${node.staff_count} staff</span>`;
+                if (node.staff_breakdown) {
+                    html += `<div class="staff-breakdown">`;
+                    html += `<small class="text-muted">P:${node.staff_breakdown.permanent} C:${node.staff_breakdown.contract}</small>`;
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+
+            // Add clickable indicator
+            html += `<div class="clickable-indicator">`;
+            html += `<i class="bi bi-box-arrow-up-right"></i>`;
+            html += `</div>`;
+
+            if (hasChildren && node.type !== 'CHIEF_DIRECTORATE') {
+                html += `<button class="expand-btn" onclick="event.stopPropagation(); toggleNode('${node.id}')">${isExpanded ? '−' : '+'}</button>`;
+            }
+
+            html += '</div>';
+            html += '</div>';
+        });
+
+        html += '</div>';
+
+        // Render children for non-Chief Directorate nodes (since Chief Directorate children are handled specially)
+        nodes.forEach(node => {
+            if (node.children && node.children.length > 0 && node.type !== 'CHIEF_DIRECTORATE') {
+                const isExpanded = expandedNodes.has(node.id);
+                html += `<div class="children-container ${isExpanded ? '' : 'collapsed'}" data-parent="${node.id}">`;
+                html += renderLevel(node.children, level + 1);
+                html += '</div>';
+            }
+        });
+
+        return html;
+    }
+    
+    function getNodeClass(type) {
+        const classes = {
+            'CEO_OFFICE': 'ceo-office',
+            'CHIEF_DIRECTORATE': 'chief-directorate',
+            'DIRECTORATE': 'directorate',
+            'SUB_DIRECTORATE': 'sub-directorate'
+        };
+        return classes[type] || '';
+    }
+    
+    window.toggleNode = function(nodeId) {
+        if (expandedNodes.has(nodeId)) {
+            expandedNodes.delete(nodeId);
+        } else {
+            expandedNodes.add(nodeId);
+        }
+        renderChart(orgData);
+    };
+
+    window.openUnitDetail = function(unitId) {
+        // Open organizational unit detail page
+        window.open(`/org-unit/${unitId}/`, '_blank');
+    };
+    
+    function expandAll() {
+        function addAllNodes(nodes) {
+            nodes.forEach(node => {
+                if (node.children && node.children.length > 0) {
+                    expandedNodes.add(node.id);
+                    addAllNodes(node.children);
+                }
+            });
+        }
+        addAllNodes(orgData);
+        renderChart(orgData);
+    }
+    
+    function collapseAll() {
+        expandedNodes.clear();
+        renderChart(orgData);
+    }
+
+    function handleSearch() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+
+        if (searchTerm === '') {
+            // Clear search highlighting
+            document.querySelectorAll('.org-box').forEach(box => {
+                box.classList.remove('search-highlight');
+            });
+            return;
+        }
+
+        // Clear previous highlights
+        document.querySelectorAll('.org-box').forEach(box => {
+            box.classList.remove('search-highlight');
+        });
+
+        // Find and highlight matching nodes
+        const matchingNodes = findMatchingNodes(orgData, searchTerm);
+        matchingNodes.forEach(nodeId => {
+            const nodeElement = document.querySelector(`[data-node-id="${nodeId}"] .org-box`);
+            if (nodeElement) {
+                nodeElement.classList.add('search-highlight');
+                // Expand path to this node
+                expandPathToNode(nodeId);
+            }
+        });
+
+        if (matchingNodes.length > 0) {
+            renderChart(orgData);
+        }
+    }
+
+    function findMatchingNodes(nodes, searchTerm) {
+        let matches = [];
+
+        function searchInNodes(nodeList) {
+            nodeList.forEach(node => {
+                if (node.name.toLowerCase().includes(searchTerm) ||
+                    node.type_display.toLowerCase().includes(searchTerm)) {
+                    matches.push(node.id);
+                }
+                if (node.children) {
+                    searchInNodes(node.children);
+                }
+            });
+        }
+
+        searchInNodes(nodes);
+        return matches;
+    }
+
+    function expandPathToNode(targetNodeId) {
+        function findPath(nodes, target, path = []) {
+            for (let node of nodes) {
+                const currentPath = [...path, node.id];
+                if (node.id === target) {
+                    return currentPath;
+                }
+                if (node.children) {
+                    const result = findPath(node.children, target, currentPath);
+                    if (result) return result;
+                }
+            }
+            return null;
+        }
+
+        const path = findPath(orgData, targetNodeId);
+        if (path) {
+            path.forEach(nodeId => expandedNodes.add(nodeId));
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('search-input').value = '';
+        document.querySelectorAll('.org-box').forEach(box => {
+            box.classList.remove('search-highlight');
+        });
+    }
+
+    function initializeDragAndZoom() {
+        chartContainer = document.getElementById('org-chart-container');
+        if (!chartContainer) return;
+
+        // Mouse events
+        chartContainer.addEventListener('mousedown', startDrag);
+        chartContainer.addEventListener('mousemove', drag);
+        chartContainer.addEventListener('mouseup', endDrag);
+        chartContainer.addEventListener('mouseleave', endDrag);
+
+        // Touch events
+        chartContainer.addEventListener('touchstart', startDrag);
+        chartContainer.addEventListener('touchmove', drag);
+        chartContainer.addEventListener('touchend', endDrag);
+
+        // Wheel zoom
+        chartContainer.addEventListener('wheel', handleWheel);
+    }
+
+    function startDrag(e) {
+        isDragging = true;
+        chartContainer.style.cursor = 'grabbing';
+
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+        dragStart = {
+            x: clientX - currentPan.x,
+            y: clientY - currentPan.y
+        };
+
+        e.preventDefault();
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+        currentPan = {
+            x: clientX - dragStart.x,
+            y: clientY - dragStart.y
+        };
+
+        updateTransform();
+        e.preventDefault();
+    }
+
+    function endDrag() {
+        isDragging = false;
+        chartContainer.style.cursor = 'grab';
+    }
+
+    function handleWheel(e) {
+        e.preventDefault();
+
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        const rect = chartContainer.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Zoom towards mouse position
+        const newZoom = Math.max(0.1, Math.min(3, currentZoom * delta));
+        const zoomRatio = newZoom / currentZoom;
+
+        currentPan.x = mouseX - (mouseX - currentPan.x) * zoomRatio;
+        currentPan.y = mouseY - (mouseY - currentPan.y) * zoomRatio;
+        currentZoom = newZoom;
+
+        updateTransform();
+    }
+
+    function zoomChart(factor) {
+        currentZoom = Math.max(0.1, Math.min(3, currentZoom * factor));
+        updateTransform();
+    }
+
+    function resetView() {
+        currentZoom = 1;
+        currentPan = { x: 0, y: 0 };
+        updateTransform();
+    }
+
+    function updateTransform() {
+        const chartContent = document.getElementById('org-chart-content');
+        if (chartContent) {
+            chartContent.style.transform = `scale(${currentZoom}) translate(${currentPan.x}px, ${currentPan.y}px)`;
+        }
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', init);
+    
+})();
+</script>
+{% endblock %}

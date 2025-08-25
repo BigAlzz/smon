@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Update Progress{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h5 mb-0">Update: {{ target.name }}</h1>
+  <a class="btn btn-outline-secondary" href="{{ back_url }}"><i class="bi bi-arrow-left"></i> Back</a>
+</div>
+
+<form method="post" class="card card-body shadow-sm" id="update-form">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label required">Period Type</label>
+      {{ form.period_type }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label required">Period Start</label>
+      {{ form.period_start }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label required">Period End</label>
+      {{ form.period_end }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label required">Period Name</label>
+      {{ form.period_name }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label required">Actual Value</label>
+      {{ form.actual_value }}
+    </div>
+    <div class="col-12">
+      <label class="form-label required">Narrative</label>
+      {{ form.narrative }}
+    </div>
+    <div class="col-12">
+      <label class="form-label">Evidence URLs (one per line)</label>
+      {{ form.evidence_urls }}
+      <div class="form-text">Required if status is persistent Amber/Red.</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Risk Rating</label>
+      {{ form.risk_rating }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Issues</label>
+      {{ form.issues }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Corrective Actions</label>
+      {{ form.corrective_actions }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Forecast Value</label>
+      {{ form.forecast_value }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Forecast Confidence</label>
+      {{ form.forecast_confidence }}
+    </div>
+  </div>
+
+  <div class="alert alert-warning d-none mt-3" id="evidence-warning">
+    Evidence is required because this item has been Amber/Red in recent periods.
+  </div>
+
+  <div class="mt-3 d-flex gap-2 align-items-center">
+    <button class="btn btn-primary" type="submit">Submit Update</button>
+    <a class="btn btn-outline-secondary" href="{{ back_url }}">Cancel</a>
+    <span class="text-muted small ms-auto" id="autosave-status">Draft not saved</span>
+  </div>
+</form>
+
+<script>
+(function(){
+  // Client-side checks + autosave draft
+  const form = document.getElementById('update-form');
+  const warn = document.getElementById('evidence-warning');
+  const evidenceRequired = {{ evidence_required|yesno:'true,false' }};
+  const statusEl = document.getElementById('autosave-status');
+  function check(){ if(evidenceRequired){ warn.classList.remove('d-none'); } }
+  document.addEventListener('DOMContentLoaded', check);
+  form.addEventListener('submit', function(e){
+    const required = ['id_period_type','id_period_start','id_period_end','id_period_name','id_actual_value','id_narrative'];
+    let first = null;
+    required.forEach(id => {
+      const el = document.getElementById(id);
+      if(el && !el.value){ el.classList.add('is-invalid'); if(!first) first = el; }
+      else if(el){ el.classList.remove('is-invalid'); }
+    });
+    if(evidenceRequired){
+      const ev = document.getElementById('id_evidence_urls');
+      if(ev && (!ev.value || ev.value.trim().length === 0)){
+        e.preventDefault();
+        ev.classList.add('is-invalid');
+        warn.classList.remove('d-none');
+        ev.scrollIntoView({behavior:'smooth', block:'center'});
+        return;
+      }
+    }
+    if(first){ e.preventDefault(); first.scrollIntoView({behavior:'smooth', block:'center'}); }
+    return;
+    }
+  });
+
+  // Debounced autosave
+  let autosaveTimer = null;
+  const debounceMs = 800;
+  function formToPayload(){
+    const fd = new FormData(form);
+    const obj = Object.fromEntries(fd.entries());
+    // evidence_urls as textarea -> array on backend; send text here
+    obj['target'] = '{{ target.id }}';
+    return obj;
+  }
+  function setStatus(msg){ statusEl.textContent = msg; }
+  async function autosave(){
+    try{
+      setStatus('Saving draft...');
+      const resp = await fetch('/api/progress-updates/draft/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': window.getCSRFToken ? window.getCSRFToken() : document.querySelector('input[name=csrfmiddlewaretoken]').value },
+        body: new URLSearchParams(formToPayload()),
+      });
+      if(resp.status === 423){ setStatus('Quarter locked'); return; }
+      const data = await resp.json();
+      if(!resp.ok){ setStatus('Draft error'); console.warn('autosave error', data); return; }
+      const ts = new Date(data.saved || Date.now());
+      setStatus('Draft saved ' + ts.toLocaleTimeString());
+    }catch(err){ setStatus('Offline — retrying...'); }
+  }
+  form.addEventListener('input', () => {
+    if(autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(autosave, debounceMs);
+  });
+})();
+</script>
+
+</script>
+{% endblock %}
+

@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Operational Plan{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-0">
+        <i class="bi bi-list-check me-2"></i>Operational Plan
+      </h1>
+      <p class="text-muted mb-0">Comprehensive view of all operational plan items</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'kpa_list' %}">
+        <i class="bi bi-gear me-1"></i>Manage KPAs
+      </a>
+      <a class="btn btn-primary" href="{% url 'plan_item_create' %}">
+        <i class="bi bi-plus-circle me-1"></i>New Plan Item
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters Card -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h6 class="mb-0">
+        <i class="bi bi-funnel me-2"></i>Filters
+      </h6>
+    </div>
+    <div class="card-body">
+      <form method="get" class="row gy-2 gx-3 align-items-end">
+        <div class="col-lg-3 col-md-4">
+          <label class="form-label">Financial Year</label>
+          <select name="year" class="form-select">
+            {% for fy in years %}
+              <option value="{{ fy.id }}" {% if fy.id == selected_year_id %}selected{% endif %}>{{ fy.year_code }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-4">
+          <label class="form-label">KPA</label>
+          <select name="kpa" class="form-select">
+            <option value="">All KPAs</option>
+            {% for k in kpas %}
+              <option value="{{ k.id }}" {% if k.id == selected_kpa_id %}selected{% endif %}>{{ k.title|truncatechars:40 }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-4">
+          <label class="form-label">Unit/Sub-Directorate</label>
+          <select name="unit" class="form-select">
+            <option value="">All Units</option>
+            {% for u in units %}
+              <option value="{{ u }}" {% if u == selected_unit %}selected{% endif %}>{{ u|truncatechars:30 }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-12">
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-search me-1"></i>Filter
+            </button>
+            <a href="{% url 'plan_grid' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>Clear
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h6 class="mb-0">
+        <i class="bi bi-table me-2"></i>Operational Plan Items
+        {% if page_obj.paginator.count %}
+          <span class="badge bg-primary ms-2">{{ page_obj.paginator.count }} total</span>
+        {% endif %}
+      </h6>
+      {% if selected_kpa_id or selected_unit %}
+        <small class="text-muted">
+          Filtered results
+          {% if selected_kpa_id %}
+            {% for kpa in kpas %}
+              {% if kpa.id == selected_kpa_id %}
+                • KPA: {{ kpa.title|truncatechars:30 }}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {% if selected_unit %} • Unit: {{ selected_unit|truncatechars:30 }}{% endif %}
+        </small>
+      {% endif %}
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <small class="text-muted">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </small>
+    </div>
+  </div>
+
+  <!-- Main Table Card -->
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+        <table class="table table-sm table-hover align-middle mb-0" style="min-width: 1000px;">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th style="min-width: 200px;">
+                <a href="?{% if request.GET.sort == 'output' and request.GET.order != 'desc' %}sort=output&order=desc{% else %}sort=output&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                  <i class="bi bi-box me-1"></i>Output
+                  {% if request.GET.sort == 'output' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th style="min-width: 180px;">
+                <a href="?{% if request.GET.sort == 'indicator' and request.GET.order != 'desc' %}sort=indicator&order=desc{% else %}sort=indicator&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                  <i class="bi bi-speedometer me-1"></i>Indicator
+                  {% if request.GET.sort == 'indicator' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th style="min-width: 160px;">
+                <a href="?{% if request.GET.sort == 'target_description' and request.GET.order != 'desc' %}sort=target_description&order=desc{% else %}sort=target_description&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                  <i class="bi bi-bullseye me-1"></i>Target
+                  {% if request.GET.sort == 'target_description' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th style="min-width: 100px;">
+                <a href="?{% if request.GET.sort == 'timeframe' and request.GET.order != 'desc' %}sort=timeframe&order=desc{% else %}sort=timeframe&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                  <i class="bi bi-calendar me-1"></i>Timeframe
+                  {% if request.GET.sort == 'timeframe' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th style="min-width: 140px;">
+                <a href="?{% if request.GET.sort == 'responsible_officer' and request.GET.order != 'desc' %}sort=responsible_officer&order=desc{% else %}sort=responsible_officer&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                  <i class="bi bi-person-badge me-1"></i>Responsible Officer
+                  {% if request.GET.sort == 'responsible_officer' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th style="min-width: 120px;">
+                <a href="?{% if request.GET.sort == 'unit_subdirectorate' and request.GET.order != 'desc' %}sort=unit_subdirectorate&order=desc{% else %}sort=unit_subdirectorate&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                  <i class="bi bi-building me-1"></i>Unit
+                  {% if request.GET.sort == 'unit_subdirectorate' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th class="text-end" style="min-width: 100px;">
+                <a href="?{% if request.GET.sort == 'input_cost' and request.GET.order != 'desc' %}sort=input_cost&order=desc{% else %}sort=input_cost&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center justify-content-end">
+                  <i class="bi bi-arrow-down-circle me-1"></i>Input Cost
+                  {% if request.GET.sort == 'input_cost' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th class="text-end" style="min-width: 100px;">
+                <a href="?{% if request.GET.sort == 'output_cost' and request.GET.order != 'desc' %}sort=output_cost&order=desc{% else %}sort=output_cost&order=asc{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center justify-content-end">
+                  <i class="bi bi-arrow-up-circle me-1"></i>Output Cost
+                  {% if request.GET.sort == 'output_cost' %}
+                    <i class="bi bi-chevron-{% if request.GET.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                  {% endif %}
+                </a>
+              </th>
+              <th class="text-end" style="min-width: 80px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in page_obj.object_list %}
+            <tr>
+              <td>
+                <div class="fw-semibold" style="max-width: 180px;">
+                  {{ item.output|truncatechars:60 }}
+                </div>
+                <small class="text-muted">{{ item.kpa.title|truncatechars:40 }}</small>
+              </td>
+              <td>
+                <div style="max-width: 160px;">
+                  {{ item.indicator|truncatechars:50 }}
+                </div>
+              </td>
+              <td data-inline="true" data-field="target_description" data-item="{{ item.id }}">
+                <div style="max-width: 140px;">
+                  {{ item.target_description|truncatechars:45 }}
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-secondary">{{ item.timeframe }}</span>
+              </td>
+              <td data-inline="true" data-field="responsible_officer" data-item="{{ item.id }}">
+                <div style="max-width: 120px;">
+                  {{ item.responsible_officer|truncatechars:20 }}
+                </div>
+              </td>
+              <td data-inline="true" data-field="unit_subdirectorate" data-item="{{ item.id }}">
+                <div style="max-width: 100px;">
+                  {{ item.unit_subdirectorate|truncatechars:18 }}
+                </div>
+              </td>
+              <td class="text-end" data-inline="true" data-type="decimal" data-field="input_cost" data-item="{{ item.id }}">
+                <span class="fw-semibold text-success">
+                  R {{ item.input_cost|floatformat:0 }}
+                </span>
+              </td>
+              <td class="text-end" data-inline="true" data-type="decimal" data-field="output_cost" data-item="{{ item.id }}">
+                <span class="fw-semibold text-primary">
+                  R {{ item.output_cost|floatformat:0 }}
+                </span>
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-outline-primary" href="{% url 'kpa_drilldown' item.kpa_id %}"
+                     title="View Details">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  <a class="btn btn-outline-secondary" href="#"
+                     title="Edit Item">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center py-5">
+                <div class="text-muted">
+                  <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                  <h6>No plan items found</h6>
+                  <p class="mb-0">No operational plan items match your current filters.</p>
+                  <a href="{% url 'plan_item_create' %}" class="btn btn-primary btn-sm mt-3">
+                    <i class="bi bi-plus-circle me-1"></i>Create First Item
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <div>
+        <small class="text-muted">
+          Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} items
+        </small>
+      </div>
+      <nav aria-label="Plan pagination">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page=1&year={{ selected_year_id }}&kpa={{ selected_kpa_id }}&unit={{ selected_unit }}">
+                <i class="bi bi-chevron-double-left"></i>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}&year={{ selected_year_id }}&kpa={{ selected_kpa_id }}&unit={{ selected_unit }}">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link"><i class="bi bi-chevron-double-left"></i></span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+            </li>
+          {% endif %}
+
+          <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          </li>
+
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}&year={{ selected_year_id }}&kpa={{ selected_kpa_id }}&unit={{ selected_unit }}">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&year={{ selected_year_id }}&kpa={{ selected_kpa_id }}&unit={{ selected_unit }}">
+                <i class="bi bi-chevron-double-right"></i>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link"><i class="bi bi-chevron-double-right"></i></span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+
+<script src="{% static 'js/plan-inline.js' %}"></script>
+
+<style>
+/* Custom styles for operational plan table */
+.table-responsive {
+  border-radius: 0.375rem;
+}
+
+.table th {
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-bottom: 2px solid #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.table td {
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Sticky header */
+.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Scrollbar styling */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Inline editing styles */
+td[data-inline="true"]:hover {
+  background-color: rgba(255, 193, 7, 0.1);
+  cursor: pointer;
+}
+
+/* Badge styling */
+.badge {
+  font-size: 0.75rem;
+}
+
+/* Button group styling */
+.btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Card styling */
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-responsive {
+    max-height: 60vh;
+  }
+
+  .btn-group {
+    flex-direction: column;
+  }
+
+  .pagination-sm .page-link {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Loading state */
+.table tbody tr.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Empty state styling */
+.table tbody td .display-4 {
+  opacity: 0.3;
+}
+</style>
+{% endblock %}
+

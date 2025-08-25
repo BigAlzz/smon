@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}{{ kpa.title }} - Drilldown{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">KPA: {{ kpa.title }}</h1>
+<div class="mb-2 text-muted">{{ kpa.financial_year.year_code }} • Owner: {{ kpa.owner.get_full_name|default:kpa.owner.username }}</div>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Output</th>
+        <th>Indicator</th>
+        <th class="text-end">YTD Target</th>
+        <th class="text-end">YTD Actual</th>
+        <th class="text-end">Variance</th>
+        <th class="text-end">Forecast</th>
+        <th>RAG</th>
+        <th>Owner</th>
+        <th></th>
+        <th class="text-end">Planned Budget</th>
+        <th class="text-end">Actual Spend</th>
+        <th class="text-end">Spend %</th>
+        <th class="text-end">Progress %</th>
+        <th>Spend Alignment</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.output }}</td>
+        <td>{{ r.indicator }}</td>
+        <td class="text-end">{{ r.ytd_target }}</td>
+        <td class="text-end">{{ r.ytd_actual }}</td>
+        <td class="text-end">{{ r.variance }}</td>
+        <td class="text-end">{{ r.forecast }}</td>
+        <td>
+          {% if r.rag == 'GREEN' %}
+            <span class="badge bg-success">Green</span>
+          {% elif r.rag == 'AMBER' %}
+            <span class="badge bg-warning text-dark">Amber</span>
+          {% elif r.rag == 'RED' %}
+            <span class="badge bg-danger">Red</span>
+          {% else %}
+            <span class="badge bg-secondary">—</span>
+          {% endif %}
+        </td>
+        <td>{{ r.owner }}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'target_create' r.item_id %}"><i class="bi bi-plus"></i> Add Target</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'item_detail' r.item_id %}">Open</a>
+          {% if r.target_id %}
+            <a class="btn btn-sm btn-primary" href="{% url 'update_wizard' r.target_id %}">Update</a>
+          {% else %}
+            <span class="btn btn-sm btn-secondary disabled">No Target</span>
+          {% endif %}
+        </td>
+        <td class="text-end">{{ r.planned_budget }}</td>
+        <td class="text-end">{{ r.actual_spend }}</td>
+        <td class="text-end">{{ r.spend_pct|floatformat:1 }}%</td>
+        <td class="text-end">{{ r.progress_pct|floatformat:1 }}%</td>
+        <td>
+          {% if r.spend_alignment_flag %}
+            <span class="badge bg-danger">Misaligned</span>
+          {% else %}
+            <span class="badge bg-success">OK</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="14" class="text-center py-5">
+          <div class="text-muted">
+            <i class="bi bi-list-check display-4 d-block mb-3"></i>
+            <h5>No Operational Plan Items</h5>
+            <p class="mb-3">This KPA doesn't have any operational plan items yet.</p>
+            <a href="{% url 'plan_item_create' %}?kpa={{ kpa.id }}" class="btn btn-primary">
+              <i class="bi bi-plus"></i> Add First Plan Item
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

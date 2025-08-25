@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ dashboard_title|default:"Staff Dashboard" }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">
+        <i class="bi bi-{% if user_level == 'senior_manager' %}speedometer2{% elif user_level == 'programme_manager' %}diagram-3{% elif user_level == 'unit_manager' %}people{% else %}person-check{% endif %}"></i>
+        {{ dashboard_title|default:"Staff Dashboard" }}
+      </h1>
+      <p class="text-muted mb-0">{{ user_role }} • {% if current_fy %}{{ current_fy.year_code }}{% else %}All Years{% endif %}</p>
+      {% if staff_member %}
+        <small class="text-muted d-block">
+          <i class="bi bi-building me-1"></i>{{ staff_member.org_unit.name }}
+          <span class="mx-2">•</span>
+          <i class="bi bi-person-badge me-1"></i>{{ staff_member.job_title }}
+        </small>
+      {% endif %}
+    </div>
+    <div class="btn-group" role="group">
+      <a href="{% url 'manager_targets_overview' %}" class="btn btn-outline-primary">
+        <i class="bi bi-target"></i> All Targets
+      </a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-house"></i> Main Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center border-primary">
+        <div class="card-body">
+          <h4 class="card-title text-primary">{{ total_kpas }}</h4>
+          <p class="card-text small text-muted">KPAs Assigned</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center border-info">
+        <div class="card-body">
+          <h4 class="card-title text-info">{{ total_plan_items }}</h4>
+          <p class="card-text small text-muted">Plan Items</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center border-success">
+        <div class="card-body">
+          <h4 class="card-title text-success">{{ total_targets }}</h4>
+          <p class="card-text small text-muted">Total Targets</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center {% if total_overdue > 0 %}border-danger{% else %}border-secondary{% endif %}">
+        <div class="card-body">
+          <h4 class="card-title {% if total_overdue > 0 %}text-danger{% else %}text-secondary{% endif %}">{{ total_overdue }}</h4>
+          <p class="card-text small text-muted">Overdue Updates</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- KPAs Overview -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="bi bi-bullseye"></i> Your KPAs</h5>
+          <small class="text-muted">{{ kpa_stats|length }} KPA{{ kpa_stats|length|pluralize }}</small>
+        </div>
+        <div class="card-body">
+          {% if kpa_stats %}
+            {% for stat in kpa_stats %}
+              <div class="border rounded p-3 mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <h6 class="mb-1">
+                      <a href="{% url 'manager_kpa_detail' stat.kpa.id %}" class="text-decoration-none">
+                        {{ stat.kpa.title }}
+                      </a>
+                    </h6>
+                    <small class="text-muted">{{ stat.kpa.strategic_objective|truncatewords:15 }}</small>
+                  </div>
+                  <div class="text-end">
+                    <span class="badge bg-primary">{{ stat.plan_items_count }} items</span>
+                    {% if stat.overdue_count > 0 %}
+                      <span class="badge bg-danger">{{ stat.overdue_count }} overdue</span>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted">Progress Updates</small>
+                    <small class="text-muted">{{ stat.targets_with_updates }}/{{ stat.total_targets }}</small>
+                  </div>
+                  <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: {{ stat.completion_rate }}%" 
+                         aria-valuenow="{{ stat.completion_rate }}" 
+                         aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Recent Updates -->
+                {% if stat.recent_updates %}
+                  <div class="mt-2">
+                    <small class="text-muted">Recent updates:</small>
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                      {% for update in stat.recent_updates|slice:":3" %}
+                        <span class="badge bg-light text-dark" title="{{ update.narrative|truncatewords:10 }}">
+                          {{ update.period_name }}
+                        </span>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+                
+                <div class="mt-2">
+                  <a href="{% url 'manager_kpa_detail' stat.kpa.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye"></i> View Details
+                  </a>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4">
+              <i class="bi bi-bullseye display-1 text-muted"></i>
+              <h5 class="mt-3">No KPAs Assigned</h5>
+              <p class="text-muted">You don't have any KPAs assigned to you yet.</p>
+              <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                <i class="bi bi-house"></i> Go to Main Dashboard
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Activity</h5>
+        </div>
+        <div class="card-body">
+          {% if recent_activity %}
+            <div class="timeline">
+              {% for update in recent_activity %}
+                <div class="timeline-item mb-3">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <div class="timeline-marker bg-primary"></div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                      <div class="timeline-content">
+                        <h6 class="mb-1">{{ update.target.name }}</h6>
+                        <p class="mb-1 small">{{ update.narrative|truncatewords:12 }}</p>
+                        <small class="text-muted">
+                          {{ update.period_name }} • {{ update.updated_at|timesince }} ago
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-3">
+              <i class="bi bi-clock text-muted"></i>
+              <p class="text-muted mb-0 mt-2">No recent activity</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="{% url 'manager_approval_dashboard' %}" class="btn btn-outline-warning btn-sm">
+              <i class="bi bi-check-circle"></i> Approve Progress Updates
+              {% comment %}<!-- TODO: Add pending count badge -->{% endcomment %}
+            </a>
+            <a href="{% url 'manager_targets_overview' %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-target"></i> View All Targets
+            </a>
+            <a href="{% url 'kpa_list' %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-list"></i> Browse All KPAs
+            </a>
+            <a href="{% url 'plan_grid' %}" class="btn btn-outline-info btn-sm">
+              <i class="bi bi-grid"></i> Operational Plan Grid
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.timeline-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+
+.timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  width: 2px;
+  height: calc(100% - 16px);
+  background-color: #dee2e6;
+}
+
+.timeline {
+  position: relative;
+}
+
+.progress {
+  background-color: #f8f9fa;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+</style>
+{% endblock %}

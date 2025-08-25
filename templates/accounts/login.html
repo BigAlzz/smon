@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - KPA Performance Monitoring{% endblock %}
+
+{% block content %}
+<div class="container">
+
+
+  <div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white text-center py-4">
+          <h3 class="mb-0">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </h3>
+          <p class="mb-0 small">KPA Performance Monitoring System</p>
+        </div>
+
+        <div class="card-body p-4">
+          <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label class="form-label">Username or Email</label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-person"></i>
+                </span>
+                <input type="text" class="form-control" name="username"
+                       autocomplete="username" required
+                       placeholder="Enter your username or email" />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-lock"></i>
+                </span>
+                <input type="password" class="form-control" name="password"
+                       autocomplete="current-password" required
+                       placeholder="Enter your password" />
+              </div>
+            </div>
+
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" name="remember_me" id="remember_me">
+              <label class="form-check-label" for="remember_me">
+                Remember me for 2 weeks
+              </label>
+            </div>
+
+            <div class="d-grid">
+              <button class="btn btn-primary btn-lg" type="submit">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card-footer text-center py-3">
+          <p class="mb-2">
+            <a href="{% url 'password_reset' %}" class="text-decoration-none">
+              <i class="bi bi-key me-1"></i>Forgot your password?
+            </a>
+          </p>
+          <p class="mb-2">
+            Don't have an account?
+            <a href="{% url 'register' %}" class="text-decoration-none">
+              <i class="bi bi-person-plus me-1"></i>Register here
+            </a>
+          </p>
+          <small class="text-muted">
+            KPA Performance Monitoring System &copy; {% now "Y" %}
+          </small>
+        </div>
+      </div>
+
+      <!-- Help Information -->
+      <div class="card mt-4 border-info">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>First Time Users
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="small mb-2">If you're a staff member:</p>
+          <ul class="small mb-0">
+            <li>Your username is typically your email prefix (before @)</li>
+            <li>Default password is "ChangeMe123!" (you'll be prompted to change it)</li>
+            <li>Register with your PERSAL number to link your staff profile</li>
+            <li>Contact IT support if you need assistance</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.card {
+  border-radius: 15px;
+}
+
+.card-header {
+  border-radius: 15px 15px 0 0 !important;
+}
+
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  border-right: 0;
+  color: var(--bs-body-color);
+}
+
+.input-group .form-control {
+  border-left: 0;
+}
+
+.input-group .form-control:focus {
+  border-left: 0;
+}
+
+.input-group .form-control:focus + .input-group-text,
+.input-group-text + .form-control:focus {
+  border-color: #0d6efd;
+}
+
+
+</style>
+
+
+{% endblock %}
+

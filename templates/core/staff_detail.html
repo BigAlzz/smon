@@ -1,0 +1,495 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load staff_tags %}
+
+{% block title %}{{ staff.full_name }} - Staff Details{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff_accounts' %}">Staff Directory</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ staff.full_name }}</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <!-- Main Profile -->
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                   style="width: 60px; height: 60px; font-size: 1.5rem;">
+                {{ staff.first_name|first|upper }}{{ staff.last_name|first|upper }}
+              </div>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <h4 class="mb-1">{{ staff.full_name }}</h4>
+              <p class="text-muted mb-0">{{ staff.job_title }}</p>
+              {% if staff.is_manager %}
+                <span class="badge bg-warning text-dark">Manager</span>
+              {% endif %}
+            </div>
+            <div class="flex-shrink-0">
+              {% if user.is_authenticated and staff.user_profile.user == user or perms.core.change_staff %}
+                <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editPhoneModal">
+                  <i class="bi bi-pencil"></i> Edit Contact
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <!-- Contact Information -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h6 class="text-muted mb-3">
+                <i class="bi bi-telephone me-2"></i>Contact Information
+                {% if user.is_authenticated and staff.user_profile.user == user or perms.core.change_staff %}
+                  <button class="btn btn-outline-secondary btn-sm ms-2" data-bs-toggle="modal" data-bs-target="#editPhoneModal">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                {% endif %}
+              </h6>
+              <dl class="row">
+                <dt class="col-sm-4">Email:</dt>
+                <dd class="col-sm-8">
+                  <a href="mailto:{{ staff.email }}">{{ staff.email }}</a>
+                </dd>
+
+                <!-- Primary Phone Numbers (from Staff record) -->
+                {% if staff.cell_number %}
+                  <dt class="col-sm-4">
+                    <i class="bi bi-phone text-success me-1"></i>Cell Phone:
+                  </dt>
+                  <dd class="col-sm-8">
+                    <a href="tel:{{ staff.cell_number }}" class="text-decoration-none">
+                      <strong>{{ staff.cell_number }}</strong>
+                    </a>
+                    <small class="text-muted ms-1">(Primary)</small>
+                  </dd>
+                {% endif %}
+
+                {% if staff.phone %}
+                  <dt class="col-sm-4">
+                    <i class="bi bi-telephone text-primary me-1"></i>Office Phone:
+                  </dt>
+                  <dd class="col-sm-8">
+                    <a href="tel:{{ staff.phone }}" class="text-decoration-none">
+                      <strong>{{ staff.phone }}</strong>
+                    </a>
+                    {% if staff.extension %}
+                      <small class="text-muted">(ext {{ staff.extension }})</small>
+                    {% endif %}
+                  </dd>
+                {% endif %}
+
+                <!-- Additional Phone Numbers (from UserProfile) -->
+                {% if staff.user_profile and staff.user_profile.mobile_number and staff.user_profile.mobile_number != staff.cell_number %}
+                  <dt class="col-sm-4">
+                    <i class="bi bi-phone text-info me-1"></i>Alt Mobile:
+                  </dt>
+                  <dd class="col-sm-8">
+                    <a href="tel:{{ staff.user_profile.mobile_number }}" class="text-decoration-none">
+                      {{ staff.user_profile.mobile_number }}
+                    </a>
+                    <small class="text-muted ms-1">(Profile)</small>
+                  </dd>
+                {% endif %}
+
+                {% if staff.user_profile and staff.user_profile.phone_number and staff.user_profile.phone_number != staff.phone %}
+                  <dt class="col-sm-4">
+                    <i class="bi bi-telephone text-info me-1"></i>Alt Phone:
+                  </dt>
+                  <dd class="col-sm-8">
+                    <a href="tel:{{ staff.user_profile.phone_number }}" class="text-decoration-none">
+                      {{ staff.user_profile.phone_number }}
+                    </a>
+                    <small class="text-muted ms-1">(Profile)</small>
+                  </dd>
+                {% endif %}
+
+                <dt class="col-sm-4">PERSAL:</dt>
+                <dd class="col-sm-8">{{ staff.persal_number }}</dd>
+              </dl>
+            </div>
+            
+            <div class="col-md-6">
+              <h6 class="text-muted mb-3">Employment Details</h6>
+              <dl class="row">
+                <dt class="col-sm-5">Employment Type:</dt>
+                <dd class="col-sm-7">{{ staff.get_employment_type_display }}</dd>
+                
+                <dt class="col-sm-5">Salary Level:</dt>
+                <dd class="col-sm-7">
+                  <span class="badge bg-{{ staff.job_title|position_color }}">
+                    {{ staff.get_salary_level_display }}
+                  </span>
+                </dd>
+                
+                <dt class="col-sm-5">Start Date:</dt>
+                <dd class="col-sm-7">{{ staff.start_date|date:"F d, Y" }}</dd>
+                
+                {% if staff.end_date %}
+                  <dt class="col-sm-5">End Date:</dt>
+                  <dd class="col-sm-7">{{ staff.end_date|date:"F d, Y" }}</dd>
+                {% endif %}
+              </dl>
+            </div>
+          </div>
+
+          <!-- Organizational Information -->
+          <div class="mb-4">
+            <h6 class="text-muted mb-3">Organizational Structure</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <dl class="row">
+                  <dt class="col-sm-4">Unit:</dt>
+                  <dd class="col-sm-8">
+                    <a href="{% url 'org_unit_detail' staff.org_unit.id %}">{{ staff.org_unit.name }}</a>
+                  </dd>
+                  
+                  <dt class="col-sm-4">Unit Type:</dt>
+                  <dd class="col-sm-8">{{ staff.org_unit.get_unit_type_display }}</dd>
+                  
+                  {% if staff.org_unit.parent %}
+                    <dt class="col-sm-4">Reports to:</dt>
+                    <dd class="col-sm-8">
+                      <a href="{% url 'org_unit_detail' staff.org_unit.parent.id %}">{{ staff.org_unit.parent.name }}</a>
+                    </dd>
+                  {% endif %}
+                </dl>
+              </div>
+              
+              <div class="col-md-6">
+                {% if staff.qualifications %}
+                  <dl class="row">
+                    <dt class="col-sm-5">Qualifications:</dt>
+                    <dd class="col-sm-7">{{ staff.get_highest_qualification_display }}</dd>
+                    
+                    {% if staff.qualification_details %}
+                      <dt class="col-sm-5">Details:</dt>
+                      <dd class="col-sm-7">{{ staff.qualification_details|truncatewords:10 }}</dd>
+                    {% endif %}
+                  </dl>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Information -->
+          {% if staff.skills or staff.development_needs %}
+            <div class="mb-4">
+              <h6 class="text-muted mb-3">Professional Development</h6>
+              {% if staff.skills %}
+                <div class="mb-3">
+                  <strong>Skills & Competencies:</strong>
+                  <p class="text-muted">{{ staff.skills }}</p>
+                </div>
+              {% endif %}
+              
+              {% if staff.development_needs %}
+                <div>
+                  <strong>Development Needs:</strong>
+                  <p class="text-muted">{{ staff.development_needs }}</p>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- Performance Information -->
+          {% if staff.performance_rating %}
+            <div class="mb-4">
+              <h6 class="text-muted mb-3">Performance</h6>
+              <dl class="row">
+                <dt class="col-sm-3">Latest Rating:</dt>
+                <dd class="col-sm-9">{{ staff.performance_rating }}</dd>
+              </dl>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+      <!-- Quick Actions -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6 class="mb-0">Quick Actions</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <a href="mailto:{{ staff.email }}" class="btn btn-outline-primary">
+              <i class="bi bi-envelope"></i> Send Email
+            </a>
+            {% if staff.phone %}
+              <a href="tel:{{ staff.phone }}" class="btn btn-outline-success">
+                <i class="bi bi-telephone"></i> Call
+              </a>
+            {% endif %}
+            <a href="{% url 'org_unit_detail' staff.org_unit.id %}" class="btn btn-outline-info">
+              <i class="bi bi-building"></i> View Unit
+            </a>
+            <a href="{% url 'org_chart' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-diagram-3"></i> Org Chart
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colleagues -->
+      {% if colleagues %}
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6 class="mb-0">Colleagues in {{ staff.org_unit.name }}</h6>
+          </div>
+          <div class="card-body">
+            {% for colleague in colleagues %}
+              <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                  <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                       style="width: 30px; height: 30px; font-size: 0.7rem;">
+                    {{ colleague.first_name|first|upper }}{{ colleague.last_name|first|upper }}
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <div class="small">
+                    <a href="{% url 'staff_detail' colleague.id %}" class="text-decoration-none">
+                      {{ colleague.full_name }}
+                    </a>
+                  </div>
+                  <div class="small text-muted">{{ colleague.job_title|truncatewords:3 }}</div>
+                  {% if colleague.cell_number %}
+                    <div class="small text-muted">
+                      <i class="bi bi-phone me-1"></i>{{ colleague.cell_number }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+            
+            <div class="mt-3">
+              <a href="{% url 'staff_accounts' %}?unit={{ staff.org_unit.id }}" class="btn btn-sm btn-outline-primary">
+                View All in Unit
+              </a>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Direct Reports -->
+      {% if direct_reports %}
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6 class="mb-0">Direct Reports</h6>
+          </div>
+          <div class="card-body">
+            {% for report in direct_reports %}
+              <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                  <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" 
+                       style="width: 30px; height: 30px; font-size: 0.7rem;">
+                    {{ report.first_name|first|upper }}{{ report.last_name|first|upper }}
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-2">
+                  <div class="small">
+                    <a href="{% url 'staff_detail' report.id %}" class="text-decoration-none">
+                      {{ report.full_name }}
+                    </a>
+                  </div>
+                  <div class="small text-muted">{{ report.job_title|truncatewords:3 }}</div>
+                  {% if report.cell_number %}
+                    <div class="small text-muted">
+                      <i class="bi bi-phone me-1"></i>{{ report.cell_number }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Unit Statistics -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">Unit Information</h6>
+        </div>
+        <div class="card-body">
+          <dl class="row">
+            <dt class="col-6">Unit:</dt>
+            <dd class="col-6">{{ staff.org_unit.name|truncatewords:3 }}</dd>
+            
+            <dt class="col-6">Type:</dt>
+            <dd class="col-6">{{ staff.org_unit.get_unit_type_display }}</dd>
+            
+            <dt class="col-6">Staff Count:</dt>
+            <dd class="col-6">{{ colleagues|length|add:1 }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Phone Numbers Modal -->
+{% if user.is_authenticated and staff.user_profile.user == user or perms.core.change_staff %}
+<div class="modal fade" id="editPhoneModal" tabindex="-1" aria-labelledby="editPhoneModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editPhoneModalLabel">
+          <i class="bi bi-telephone me-2"></i>Edit Contact Information
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="editPhoneForm" method="post" action="{% url 'staff_edit_phone' staff.id %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="cell_number" class="form-label">
+                  <i class="bi bi-phone text-success me-1"></i>Cell Phone
+                </label>
+                <input type="tel" class="form-control" id="cell_number" name="cell_number"
+                       value="{{ staff.cell_number }}" placeholder="+27 82 123 4567">
+                <div class="form-text">Primary mobile number</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="phone" class="form-label">
+                  <i class="bi bi-telephone text-primary me-1"></i>Office Phone
+                </label>
+                <input type="tel" class="form-control" id="phone" name="phone"
+                       value="{{ staff.phone }}" placeholder="+27 11 123 4567">
+                <div class="form-text">Office landline number</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="extension" class="form-label">Extension</label>
+                <input type="text" class="form-control" id="extension" name="extension"
+                       value="{{ staff.extension }}" placeholder="1234">
+                <div class="form-text">Office extension (optional)</div>
+              </div>
+            </div>
+            {% if staff.user_profile %}
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="profile_mobile" class="form-label">
+                  <i class="bi bi-phone text-info me-1"></i>Profile Mobile
+                </label>
+                <input type="tel" class="form-control" id="profile_mobile" name="profile_mobile"
+                       value="{{ staff.user_profile.mobile_number }}" placeholder="+27 83 123 4567">
+                <div class="form-text">Alternative mobile number</div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% if staff.user_profile %}
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="profile_phone" class="form-label">
+                  <i class="bi bi-telephone text-info me-1"></i>Profile Phone
+                </label>
+                <input type="tel" class="form-control" id="profile_phone" name="profile_phone"
+                       value="{{ staff.user_profile.phone_number }}" placeholder="+27 11 987 6543">
+                <div class="form-text">Alternative phone number</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle phone edit form submission
+  const editPhoneForm = document.getElementById('editPhoneForm');
+  if (editPhoneForm) {
+    editPhoneForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+
+      // Show loading state
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
+
+      fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Show success message
+          const toast = document.createElement('div');
+          toast.className = 'toast align-items-center text-bg-success border-0 position-fixed top-0 end-0 m-3';
+          toast.style.zIndex = '9999';
+          toast.innerHTML = `
+            <div class="d-flex">
+              <div class="toast-body">
+                <i class="bi bi-check-circle me-2"></i>Contact information updated successfully!
+              </div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+          `;
+          document.body.appendChild(toast);
+
+          const bsToast = new bootstrap.Toast(toast);
+          bsToast.show();
+
+          // Close modal and reload page
+          const modal = bootstrap.Modal.getInstance(document.getElementById('editPhoneModal'));
+          modal.hide();
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          // Show error message
+          alert('Error: ' + (data.error || 'Failed to update contact information'));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating contact information');
+      })
+      .finally(() => {
+        // Reset button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

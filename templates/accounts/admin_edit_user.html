@@ -1,0 +1,568 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit User: {{ edited_user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="bi bi-person-gear"></i> Edit User: {{ edited_user.username }}
+      </h1>
+      <p class="text-muted mb-0">Comprehensive user and profile management</p>
+    </div>
+    <div>
+      <a href="{% url 'user_management' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to User Management
+      </a>
+      <a href="/admin/auth/user/{{ edited_user.id }}/change/" class="btn btn-outline-primary" target="_blank">
+        <i class="bi bi-gear"></i> Django Admin
+      </a>
+    </div>
+  </div>
+
+  <!-- User Status Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center {% if edited_user.is_active %}border-success{% else %}border-danger{% endif %}">
+        <div class="card-body">
+          <i class="bi bi-person-check fs-1 {% if edited_user.is_active %}text-success{% else %}text-danger{% endif %}"></i>
+          <h6 class="card-title mt-2">Account Status</h6>
+          <span class="badge {% if edited_user.is_active %}bg-success{% else %}bg-danger{% endif %}">
+            {% if edited_user.is_active %}Active{% else %}Inactive{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center {% if edited_user.is_staff %}border-primary{% else %}border-secondary{% endif %}">
+        <div class="card-body">
+          <i class="bi bi-shield-check fs-1 {% if edited_user.is_staff %}text-primary{% else %}text-secondary{% endif %}"></i>
+          <h6 class="card-title mt-2">Staff Status</h6>
+          <span class="badge {% if edited_user.is_staff %}bg-primary{% else %}bg-secondary{% endif %}">
+            {% if edited_user.is_staff %}Staff{% else %}Regular User{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center {% if edited_user.is_superuser %}border-warning{% else %}border-secondary{% endif %}">
+        <div class="card-body">
+          <i class="bi bi-crown fs-1 {% if edited_user.is_superuser %}text-warning{% else %}text-secondary{% endif %}"></i>
+          <h6 class="card-title mt-2">Admin Status</h6>
+          <span class="badge {% if edited_user.is_superuser %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+            {% if edited_user.is_superuser %}Superuser{% else %}Regular User{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center {% if user_profile.primary_role %}border-info{% else %}border-secondary{% endif %}">
+        <div class="card-body">
+          <i class="bi bi-person-badge fs-1 {% if user_profile.primary_role %}text-info{% else %}text-secondary{% endif %}"></i>
+          <h6 class="card-title mt-2">Role</h6>
+          <span class="badge {% if user_profile.primary_role %}bg-info{% else %}bg-secondary{% endif %}">
+            {% if user_profile.primary_role %}{{ user_profile.get_primary_role_display }}{% else %}No Role{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabbed Interface -->
+  <div class="card">
+    <div class="card-header">
+      <ul class="nav nav-tabs card-header-tabs" id="userEditTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">
+            <i class="bi bi-person"></i> Basic Information
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+            <i class="bi bi-card-text"></i> Profile Details
+          </button>
+        </li>
+        {% if can_change_password %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="password-tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab">
+            <i class="bi bi-key"></i> Change Password
+          </button>
+        </li>
+        {% endif %}
+        {% if staff_member %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="staff-tab" data-bs-toggle="tab" data-bs-target="#staff" type="button" role="tab">
+            <i class="bi bi-building"></i> Staff Record
+          </button>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+    
+    <div class="card-body">
+      <div class="tab-content" id="userEditTabsContent">
+        
+        <!-- Basic Information Tab -->
+        <div class="tab-pane fade show active" id="basic" role="tabpanel">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_user">
+            
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="username" class="form-label">Username</label>
+                  <input type="text" class="form-control" id="username" value="{{ edited_user.username }}" readonly>
+                  <div class="form-text">Username cannot be changed</div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="first_name" class="form-label">First Name</label>
+                  <input type="text" class="form-control" id="first_name" name="first_name" value="{{ edited_user.first_name }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="last_name" class="form-label">Last Name</label>
+                  <input type="text" class="form-control" id="last_name" name="last_name" value="{{ edited_user.last_name }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="email" class="form-label">Email Address</label>
+                  <input type="email" class="form-control" id="email" name="email" value="{{ edited_user.email }}">
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Account Status</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if edited_user.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">
+                      Account is active
+                    </label>
+                  </div>
+                </div>
+                
+                {% if can_edit_permissions %}
+                <div class="mb-3">
+                  <label class="form-label">System Permissions</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_staff" name="is_staff" {% if edited_user.is_staff %}checked{% endif %}>
+                    <label class="form-check-label" for="is_staff">
+                      Staff status (can access admin)
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_superuser" name="is_superuser" {% if edited_user.is_superuser %}checked{% endif %}>
+                    <label class="form-check-label" for="is_superuser">
+                      Superuser status (all permissions)
+                    </label>
+                  </div>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                  <label class="form-label">Account Dates</label>
+                  <div class="small text-muted">
+                    <div><strong>Date Joined:</strong> {{ edited_user.date_joined|date:"M d, Y g:i A" }}</div>
+                    <div><strong>Last Login:</strong> {% if edited_user.last_login %}{{ edited_user.last_login|date:"M d, Y g:i A" }}{% else %}Never{% endif %}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Update Basic Information
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Profile Details Tab -->
+        <div class="tab-pane fade" id="profile" role="tabpanel">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_profile">
+
+            <!-- Error Summary -->
+            {% if profile_form.errors %}
+            <div class="form-errors-summary">
+              <h6><i class="bi bi-exclamation-triangle"></i> Please correct the following errors:</h6>
+              <ul>
+                {% for field, errors in profile_form.errors.items %}
+                  {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="mb-3">Role & Department</h6>
+
+                {% if can_edit_permissions %}
+                <div class="mb-3">
+                  <label for="{{ profile_form.primary_role.id_for_label }}" class="form-label">{{ profile_form.primary_role.label }}</label>
+                  {{ profile_form.primary_role }}
+                  {% if profile_form.primary_role.help_text %}
+                    <div class="form-text">{{ profile_form.primary_role.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.primary_role.errors %}
+                    <div class="text-danger">{{ profile_form.primary_role.errors }}</div>
+                  {% endif %}
+                </div>
+                {% else %}
+                <div class="mb-3">
+                  <label class="form-label">Role</label>
+                  <input type="text" class="form-control" value="{{ user_profile.get_primary_role_display }}" readonly>
+                  <div class="form-text">Contact an administrator to change your role</div>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.employee_number.id_for_label }}" class="form-label">{{ profile_form.employee_number.label }}</label>
+                  {{ profile_form.employee_number }}
+                  {% if profile_form.employee_number.help_text %}
+                    <div class="form-text">{{ profile_form.employee_number.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.employee_number.errors %}
+                    <div class="text-danger">{{ profile_form.employee_number.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.job_title.id_for_label }}" class="form-label">{{ profile_form.job_title.label }}</label>
+                  {{ profile_form.job_title }}
+                  {% if profile_form.job_title.help_text %}
+                    <div class="form-text">{{ profile_form.job_title.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.job_title.errors %}
+                    <div class="text-danger">{{ profile_form.job_title.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.department.id_for_label }}" class="form-label">{{ profile_form.department.label }}</label>
+                  {{ profile_form.department }}
+                  {% if profile_form.department.help_text %}
+                    <div class="form-text">{{ profile_form.department.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.department.errors %}
+                    <div class="text-danger">{{ profile_form.department.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.unit_subdirectorate.id_for_label }}" class="form-label">{{ profile_form.unit_subdirectorate.label }}</label>
+                  {{ profile_form.unit_subdirectorate }}
+                  {% if profile_form.unit_subdirectorate.help_text %}
+                    <div class="form-text">{{ profile_form.unit_subdirectorate.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.unit_subdirectorate.errors %}
+                    <div class="text-danger">{{ profile_form.unit_subdirectorate.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <h6 class="mb-3">Contact Information</h6>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.phone_number.id_for_label }}" class="form-label">{{ profile_form.phone_number.label }}</label>
+                  {{ profile_form.phone_number }}
+                  {% if profile_form.phone_number.help_text %}
+                    <div class="form-text">{{ profile_form.phone_number.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.phone_number.errors %}
+                    <div class="text-danger">{{ profile_form.phone_number.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.mobile_number.id_for_label }}" class="form-label">{{ profile_form.mobile_number.label }}</label>
+                  {{ profile_form.mobile_number }}
+                  {% if profile_form.mobile_number.help_text %}
+                    <div class="form-text">{{ profile_form.mobile_number.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.mobile_number.errors %}
+                    <div class="text-danger">{{ profile_form.mobile_number.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.office_location.id_for_label }}" class="form-label">{{ profile_form.office_location.label }}</label>
+                  {{ profile_form.office_location }}
+                  {% if profile_form.office_location.help_text %}
+                    <div class="form-text">{{ profile_form.office_location.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.office_location.errors %}
+                    <div class="text-danger">{{ profile_form.office_location.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.line_manager.id_for_label }}" class="form-label">{{ profile_form.line_manager.label }}</label>
+                  {{ profile_form.line_manager }}
+                  {% if profile_form.line_manager.help_text %}
+                    <div class="form-text">{{ profile_form.line_manager.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.line_manager.errors %}
+                    <div class="text-danger">{{ profile_form.line_manager.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ profile_form.profile_picture.id_for_label }}" class="form-label">{{ profile_form.profile_picture.label }}</label>
+                  {{ profile_form.profile_picture }}
+                  {% if user_profile.profile_picture %}
+                    <div class="mt-2">
+                      <img src="{{ user_profile.profile_picture.url }}" alt="Current profile picture" class="img-thumbnail" style="max-width: 100px;">
+                    </div>
+                  {% endif %}
+                  {% if profile_form.profile_picture.help_text %}
+                    <div class="form-text">{{ profile_form.profile_picture.help_text }}</div>
+                  {% endif %}
+                  {% if profile_form.profile_picture.errors %}
+                    <div class="text-danger">{{ profile_form.profile_picture.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Permissions Section -->
+            {% if can_edit_permissions %}
+            <hr>
+            <div class="row">
+              <div class="col-12">
+                <h6 class="mb-3">Permissions & Access</h6>
+
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="form-check">
+                      {{ profile_form.is_active_user }}
+                      <label class="form-check-label" for="{{ profile_form.is_active_user.id_for_label }}">
+                        {{ profile_form.is_active_user.label }}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="form-check">
+                      {{ profile_form.can_view_all_kpas }}
+                      <label class="form-check-label" for="{{ profile_form.can_view_all_kpas.id_for_label }}">
+                        {{ profile_form.can_view_all_kpas.label }}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="form-check">
+                      {{ profile_form.can_approve_updates }}
+                      <label class="form-check-label" for="{{ profile_form.can_approve_updates.id_for_label }}">
+                        {{ profile_form.can_approve_updates.label }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mt-2">
+                  <div class="col-md-4">
+                    <div class="form-check">
+                      {{ profile_form.can_generate_reports }}
+                      <label class="form-check-label" for="{{ profile_form.can_generate_reports.id_for_label }}">
+                        {{ profile_form.can_generate_reports.label }}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="form-check">
+                      {{ profile_form.email_notifications }}
+                      <label class="form-check-label" for="{{ profile_form.email_notifications.id_for_label }}">
+                        {{ profile_form.email_notifications.label }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <!-- Basic preferences for non-admin users -->
+            <hr>
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="mb-3">Preferences</h6>
+                <div class="form-check">
+                  {{ profile_form.email_notifications }}
+                  <label class="form-check-label" for="{{ profile_form.email_notifications.id_for_label }}">
+                    {{ profile_form.email_notifications.label }}
+                  </label>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-end mt-4">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Update Profile
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Change Password Tab -->
+        {% if can_change_password %}
+        <div class="tab-pane fade" id="password" role="tabpanel">
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Password Change:</strong>
+            {% if is_editing_self %}
+              This will change your password. You will need to use the new password to log in.
+            {% else %}
+              This will immediately change {{ edited_user.username }}'s password. They will need to use the new password to log in.
+            {% endif %}
+          </div>
+
+          {% if password_form %}
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="change_password">
+
+            <div class="row">
+              <div class="col-md-6">
+                {% if is_editing_self %}
+                  <div class="mb-3">
+                    <label for="{{ password_form.old_password.id_for_label }}" class="form-label">{{ password_form.old_password.label }}</label>
+                    {{ password_form.old_password }}
+                    {% if password_form.old_password.help_text %}
+                      <div class="form-text">{{ password_form.old_password.help_text }}</div>
+                    {% endif %}
+                    {% if password_form.old_password.errors %}
+                      <div class="text-danger">{{ password_form.old_password.errors }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="mb-3">
+                  <label for="{{ password_form.password1.id_for_label }}" class="form-label">{{ password_form.password1.label }}</label>
+                  {{ password_form.password1 }}
+                  {% if password_form.password1.help_text %}
+                    <div class="form-text">{{ password_form.password1.help_text }}</div>
+                  {% endif %}
+                  {% if password_form.password1.errors %}
+                    <div class="text-danger">{{ password_form.password1.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="mb-3">
+                  <label for="{{ password_form.password2.id_for_label }}" class="form-label">{{ password_form.password2.label }}</label>
+                  {{ password_form.password2 }}
+                  {% if password_form.password2.help_text %}
+                    <div class="form-text">{{ password_form.password2.help_text }}</div>
+                  {% endif %}
+                  {% if password_form.password2.errors %}
+                    <div class="text-danger">{{ password_form.password2.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="card bg-light">
+                  <div class="card-body">
+                    <h6 class="card-title">Password Requirements</h6>
+                    <ul class="small mb-0">
+                      <li>At least 8 characters long</li>
+                      <li>Cannot be entirely numeric</li>
+                      <li>Cannot be too similar to user information</li>
+                      <li>Cannot be a commonly used password</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-warning">
+                <i class="bi bi-key"></i> Change Password
+              </button>
+            </div>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Staff Record Tab -->
+        {% if staff_member %}
+        <div class="tab-pane fade" id="staff" role="tabpanel">
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            This user is linked to staff member: <strong>{{ staff_member.full_name }}</strong> ({{ staff_member.persal_number }})
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <h6>Staff Information</h6>
+              <table class="table table-sm">
+                <tr><td><strong>PERSAL Number:</strong></td><td>{{ staff_member.persal_number }}</td></tr>
+                <tr><td><strong>Job Title:</strong></td><td>{{ staff_member.job_title }}</td></tr>
+                <tr><td><strong>Organizational Unit:</strong></td><td>{{ staff_member.org_unit.name }}</td></tr>
+                <tr><td><strong>Employment Type:</strong></td><td>{{ staff_member.get_employment_type_display }}</td></tr>
+                <tr><td><strong>Start Date:</strong></td><td>{{ staff_member.start_date|date:"M d, Y" }}</td></tr>
+              </table>
+            </div>
+            
+            <div class="col-md-6">
+              <h6>Contact Information</h6>
+              <table class="table table-sm">
+                <tr><td><strong>Email:</strong></td><td>{{ staff_member.email }}</td></tr>
+                <tr><td><strong>Phone:</strong></td><td>{{ staff_member.phone|default:"—" }}</td></tr>
+                <tr><td><strong>Cell:</strong></td><td>{{ staff_member.cell_number|default:"—" }}</td></tr>
+                <tr><td><strong>Extension:</strong></td><td>{{ staff_member.extension|default:"—" }}</td></tr>
+              </table>
+            </div>
+          </div>
+          
+          <div class="d-flex justify-content-end">
+            <a href="/admin/core/staff/{{ staff_member.id }}/change/" class="btn btn-outline-primary" target="_blank">
+              <i class="bi bi-pencil"></i> Edit Staff Record
+            </a>
+          </div>
+        </div>
+        {% endif %}
+        
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add form styling
+document.addEventListener('DOMContentLoaded', function() {
+    // Style form fields
+    const formControls = document.querySelectorAll('input, select, textarea');
+    formControls.forEach(function(control) {
+        if (!control.classList.contains('form-control') && !control.classList.contains('form-check-input')) {
+            control.classList.add('form-control');
+        }
+    });
+    
+    // Handle tab switching
+    const tabTriggerList = [].slice.call(document.querySelectorAll('#userEditTabs button'));
+    tabTriggerList.forEach(function (tabTriggerEl) {
+        tabTriggerEl.addEventListener('click', function (event) {
+            event.preventDefault();
+            const tab = new bootstrap.Tab(tabTriggerEl);
+            tab.show();
+        });
+    });
+});
+</script>
+{% endblock %}

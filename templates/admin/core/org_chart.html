@@ -1,0 +1,401 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">Home</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label='core' %}">Core</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+/* Modern Professional Org Chart Styles */
+.org-chart {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 500px;
+    padding: 40px 20px;
+    border-radius: 12px;
+}
+
+.org-level {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 40px 0;
+    position: relative;
+}
+
+.org-node {
+    position: relative;
+    margin: 0 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.org-box {
+    background: white;
+    border: none;
+    border-radius: 12px;
+    padding: 20px 25px;
+    min-width: 200px;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.org-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--unit-color);
+    border-radius: 12px 12px 0 0;
+}
+
+.org-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.org-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.org-subtitle {
+    font-size: 12px;
+    color: #7f8c8d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.expand-indicator {
+    margin-top: 12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--unit-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.expand-indicator:hover {
+    transform: scale(1.1);
+}
+
+/* Connecting Lines */
+.org-node::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 40px;
+    background: #000000;
+    z-index: 1;
+}
+
+.org-level:first-child .org-node::before {
+    display: none;
+}
+
+.org-level::after {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #000000;
+    z-index: 0;
+}
+
+.org-level:first-child::after {
+    display: none;
+}
+
+/* Color scheme for different levels */
+.level-ceo { --unit-color: #e74c3c; }
+.level-chief { --unit-color: #3498db; }
+.level-directorate { --unit-color: #2ecc71; }
+.level-sub { --unit-color: #f39c12; }
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .org-level {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .org-node {
+        margin: 20px 0;
+    }
+
+    .org-box {
+        min-width: 280px;
+    }
+
+    .org-level::after {
+        display: none;
+    }
+
+    .org-node::before {
+        top: -20px;
+        height: 20px;
+    }
+}
+
+/* Animation for expand/collapse */
+.children-container {
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.children-container.collapsed {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
+.children-container.expanded {
+    max-height: 2000px;
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>{{ title }}</h1>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="expand-all">Expand All</button>
+    <button class="btn btn-outline-secondary btn-sm" id="collapse-all">Collapse All</button>
+    <button class="btn btn-outline-primary btn-sm" id="center-chart">Center</button>
+    <a href="{% url 'admin:core_orgunit_changelist' %}" class="btn btn-primary btn-sm">Manage Units</a>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div id="org-chart-container" style="width: 100%; height: 600px; overflow: hidden; border: 1px solid #ddd;">
+      <div id="loading" class="d-flex justify-content-center align-items-center h-100">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-3">
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card border-0 bg-light">
+        <div class="card-body text-center py-2">
+          <div class="d-flex align-items-center justify-content-center">
+            <div class="me-2" style="width: 20px; height: 20px; background: #e74c3c; border-radius: 3px;"></div>
+            <small>CEO Office</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 bg-light">
+        <div class="card-body text-center py-2">
+          <div class="d-flex align-items-center justify-content-center">
+            <div class="me-2" style="width: 20px; height: 20px; background: #3498db; border-radius: 3px;"></div>
+            <small>Chief Directorate</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 bg-light">
+        <div class="card-body text-center py-2">
+          <div class="d-flex align-items-center justify-content-center">
+            <div class="me-2" style="width: 20px; height: 20px; background: #2ecc71; border-radius: 3px;"></div>
+            <small>Directorate</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 bg-light">
+        <div class="card-body text-center py-2">
+          <div class="d-flex align-items-center justify-content-center">
+            <div class="me-2" style="width: 20px; height: 20px; background: #f39c12; border-radius: 3px;"></div>
+            <small>Sub-Directorate</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Simple fallback chart that works without D3.js
+function initFallbackChart() {
+    console.log('Initializing fallback organizational chart...');
+
+    const container = document.getElementById('org-chart-container');
+    if (!container) {
+        console.error('org-chart-container not found');
+        return;
+    }
+
+    // Show loading
+    container.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+
+    // Load data
+    fetch('/org-chart/data/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Data loaded:', data);
+            if (data.success && data.data) {
+                renderFallbackChart(data.data);
+            } else {
+                showError('No organizational data available');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading data:', error);
+            showError('Error loading organizational chart: ' + error.message);
+        });
+
+    function renderFallbackChart(data) {
+        const container = document.getElementById('org-chart-container');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="org-chart">
+                <h3 style="text-align: center; color: #2c3e50; margin-bottom: 30px; font-weight: 300;">Organizational Structure</h3>
+                <div id="tree-container">${renderTree(data, 0)}</div>
+            </div>
+        `;
+
+        // Add global toggle function for expand/collapse
+        window.toggleChildren = function(nodeId) {
+            const childrenContainer = document.querySelector(`[data-parent="${nodeId}"]`);
+            const indicator = document.querySelector(`[data-node="${nodeId}"] .expand-indicator`);
+
+            if (childrenContainer && indicator) {
+                const isCollapsed = childrenContainer.classList.contains('collapsed');
+
+                if (isCollapsed) {
+                    childrenContainer.classList.remove('collapsed');
+                    childrenContainer.classList.add('expanded');
+                    indicator.textContent = '−';
+                } else {
+                    childrenContainer.classList.remove('expanded');
+                    childrenContainer.classList.add('collapsed');
+                    indicator.textContent = '+';
+                }
+            }
+        };
+    }
+
+    function renderTree(nodes, level, parentId = null) {
+        if (!nodes || nodes.length === 0) return '';
+
+        const levelClasses = {
+            'CEO_OFFICE': 'level-ceo',
+            'CHIEF_DIRECTORATE': 'level-chief',
+            'DIRECTORATE': 'level-directorate',
+            'SUB_DIRECTORATE': 'level-sub'
+        };
+
+        let html = '<div class="org-level">';
+
+        nodes.forEach((node, index) => {
+            const hasChildren = node.children && node.children.length > 0;
+            const levelClass = levelClasses[node.type] || 'level-sub';
+
+            html += `<div class="org-node ${levelClass}" data-node="${node.id}">`;
+
+            // The professional org chart box
+            html += `<div class="org-box" ${hasChildren ? `onclick="toggleChildren('${node.id}')"` : ''}>`;
+            html += `<div class="org-title">${node.name}</div>`;
+            html += `<div class="org-subtitle">${node.type_display}</div>`;
+
+            if (hasChildren) {
+                html += `<div class="expand-indicator">−</div>`;
+            }
+
+            html += '</div>';
+            html += '</div>';
+        });
+
+        html += '</div>';
+
+        // Render children in separate containers
+        nodes.forEach(node => {
+            if (node.children && node.children.length > 0) {
+                html += `<div class="children-container expanded" data-parent="${node.id}">`;
+                html += renderTree(node.children, level + 1, node.id);
+                html += '</div>';
+            }
+        });
+
+        return html;
+    }
+
+    function showError(message) {
+        const container = document.getElementById('org-chart-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center h-100">
+                    <div class="alert alert-danger" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> ${message}
+                    </div>
+                </div>
+            `;
+        }
+    }
+}
+
+// Check if D3.js is available, if not use fallback
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for D3.js to load
+    setTimeout(function() {
+        if (typeof d3 === 'undefined') {
+            console.log('D3.js not available, using fallback visualization');
+            initFallbackChart();
+        }
+        // If D3.js is available, the org-chart.js will handle it
+    }, 100);
+});
+</script>
+<script src="https://d3js.org/d3.v7.min.js" onerror="console.log('D3.js CDN failed to load')"></script>
+<script src="{% static 'js/org-chart.js' %}"></script>
+{% endblock %}

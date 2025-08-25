@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Progress Approval Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-check-circle"></i> Progress Approval Dashboard</h2>
+      <p class="text-muted mb-0">Review and approve submitted progress updates</p>
+    </div>
+    <div>
+      <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card border-warning">
+        <div class="card-body text-center">
+          <i class="bi bi-clock-history display-4 text-warning"></i>
+          <h3 class="mt-2">{{ pending_count }}</h3>
+          <p class="text-muted mb-0">Pending Approvals</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-success">
+        <div class="card-body text-center">
+          <i class="bi bi-check-circle display-4 text-success"></i>
+          <h3 class="mt-2">{{ recent_approvals.count }}</h3>
+          <p class="text-muted mb-0">Recent Approvals</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-info">
+        <div class="card-body text-center">
+          <i class="bi bi-speedometer2 display-4 text-info"></i>
+          <h3 class="mt-2">
+            {% if pending_count > 0 %}
+              {{ recent_approvals.count|add:pending_count }}
+            {% else %}
+              {{ recent_approvals.count }}
+            {% endif %}
+          </h3>
+          <p class="text-muted mb-0">Total This Month</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Approvals -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="bi bi-clock-history text-warning"></i> Pending Approvals
+        {% if pending_count > 0 %}
+          <span class="badge bg-warning text-dark">{{ pending_count }}</span>
+        {% endif %}
+      </h5>
+    </div>
+    <div class="card-body">
+      {% if pending_updates %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Target</th>
+                <th>KPA</th>
+                <th>Period</th>
+                <th>Value</th>
+                <th>RAG Status</th>
+                <th>Submitted By</th>
+                <th>Submitted</th>
+                <th>Evidence</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for update in pending_updates %}
+                <tr>
+                  <td>
+                    <strong>{{ update.target.name }}</strong>
+                    <br>
+                    <small class="text-muted">{{ update.target.plan_item.output|truncatewords:8 }}</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary">{{ update.target.plan_item.kpa.title }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ update.period_name }}</strong>
+                    <br>
+                    <small class="text-muted">{{ update.period_start|date:"M d" }} - {{ update.period_end|date:"M d, Y" }}</small>
+                  </td>
+                  <td>
+                    <strong>{{ update.actual_value }} {{ update.target.get_unit_display }}</strong>
+                    <br>
+                    <small class="text-muted">{{ update.percentage_complete|floatformat:1 }}% complete</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ update.rag_status|lower }}">{{ update.rag_status }}</span>
+                  </td>
+                  <td>
+                    {{ update.created_by.get_full_name|default:update.created_by.username }}
+                    <br>
+                    <small class="text-muted">{{ update.created_by.profile.get_primary_role_display|default:"Staff" }}</small>
+                  </td>
+                  <td>
+                    {{ update.submitted_at|date:"M d, Y" }}
+                    <br>
+                    <small class="text-muted">{{ update.submitted_at|timesince }} ago</small>
+                  </td>
+                  <td>
+                    {% with evidence_count=update.uploaded_evidence.count url_count=update.evidence_urls|length %}
+                      {% if evidence_count > 0 or url_count > 0 %}
+                        <i class="bi bi-paperclip text-success"></i>
+                        {{ evidence_count }} file(s), {{ url_count }} URL(s)
+                      {% else %}
+                        <i class="bi bi-dash-circle text-muted"></i>
+                        No evidence
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                  <td>
+                    <a href="{% url 'manager_progress_approval' update.id %}" class="btn btn-sm btn-primary">
+                      <i class="bi bi-eye"></i> Review
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-check-circle display-4 text-success"></i>
+          <h5 class="mt-3">No Pending Approvals</h5>
+          <p class="text-muted">All submitted progress updates have been reviewed.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent Approvals -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="bi bi-check-circle text-success"></i> Recent Approvals
+        <small class="text-muted">(Last 30 days)</small>
+      </h5>
+    </div>
+    <div class="card-body">
+      {% if recent_approvals %}
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Target</th>
+                <th>Period</th>
+                <th>Value</th>
+                <th>Approved By</th>
+                <th>Approved</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for update in recent_approvals %}
+                <tr>
+                  <td>
+                    <strong>{{ update.target.name }}</strong>
+                    <br>
+                    <small class="text-muted">{{ update.target.plan_item.kpa.title }}</small>
+                  </td>
+                  <td>{{ update.period_name }}</td>
+                  <td>{{ update.actual_value }} {{ update.target.get_unit_display }}</td>
+                  <td>{{ update.approved_by.get_full_name|default:update.approved_by.username }}</td>
+                  <td>{{ update.approved_at|date:"M d, Y H:i" }}</td>
+                  <td>
+                    <span class="badge bg-success">
+                      <i class="bi bi-check-circle"></i> Approved
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-3">
+          <i class="bi bi-clock-history display-6 text-muted"></i>
+          <p class="text-muted mt-2 mb-0">No recent approvals to display.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.badge.bg-green { background-color: #28a745 !important; }
+.badge.bg-amber { background-color: #ffc107 !important; color: #000 !important; }
+.badge.bg-red { background-color: #dc3545 !important; }
+.badge.bg-grey { background-color: #6c757d !important; }
+</style>
+{% endblock %}

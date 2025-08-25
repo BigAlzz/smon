@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}CSRF Test{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1>CSRF Token Test</h1>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>CSRF Token Information</h5>
+        </div>
+        <div class="card-body">
+          <p><strong>Meta Token:</strong> <span id="meta-token">{{ csrf_token }}</span></p>
+          <p><strong>Cookie Token:</strong> <span id="cookie-token">-</span></p>
+          <p><strong>Form Token:</strong> <span id="form-token">-</span></p>
+          
+          <button class="btn btn-info btn-sm" onclick="window.debugCSRF()">Debug CSRF</button>
+          <button class="btn btn-secondary btn-sm" onclick="refreshTokens()">Refresh</button>
+        </div>
+      </div>
+      
+      <div class="card mt-3">
+        <div class="card-header">
+          <h5>Test Form</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" id="test-form">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">Test Field</label>
+              <input type="text" class="form-control" name="test_field" value="Test Value">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Test</button>
+          </form>
+          
+          <div id="form-result" class="mt-3"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5>AJAX Test</h5>
+        </div>
+        <div class="card-body">
+          <button class="btn btn-success" onclick="testAjax()">Test AJAX Request</button>
+          <div id="ajax-result" class="mt-3"></div>
+        </div>
+      </div>
+      
+      <div class="card mt-3">
+        <div class="card-header">
+          <h5>Debug Information</h5>
+        </div>
+        <div class="card-body">
+          <button class="btn btn-warning" onclick="loadDebugInfo()">Load Debug Info</button>
+          <pre id="debug-info" class="mt-3 small"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function refreshTokens() {
+  document.getElementById('meta-token').textContent = 
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 'Not found';
+  
+  const cookieMatch = document.cookie.match(/csrftoken=([^;]+)/);
+  document.getElementById('cookie-token').textContent = 
+    cookieMatch ? cookieMatch[1] : 'Not found';
+  
+  const formToken = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  document.getElementById('form-token').textContent = 
+    formToken ? formToken.value : 'Not found';
+}
+
+function testAjax() {
+  const resultDiv = document.getElementById('ajax-result');
+  resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Testing...';
+
+  const token = window.getCSRFToken();
+  console.log('Using CSRF token:', token);
+
+  fetch('/debug/csrf/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': token
+    },
+    body: 'test_ajax=true'
+  })
+  .then(response => {
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  })
+  .then(data => {
+    console.log('Response data:', data);
+    resultDiv.innerHTML = `
+      <div class="alert alert-success">
+        <strong>AJAX Success!</strong><br>
+        Status: ${data.status}<br>
+        Token from POST: ${data.csrf_from_post || 'N/A'}<br>
+        Token from Header: ${data.csrf_header || 'N/A'}
+      </div>
+    `;
+  })
+  .catch(error => {
+    console.error('AJAX Error:', error);
+    resultDiv.innerHTML = `
+      <div class="alert alert-danger">
+        <strong>AJAX Error:</strong> ${error.message}<br>
+        <small>Check browser console for details</small>
+      </div>
+    `;
+  });
+}
+
+function loadDebugInfo() {
+  const debugDiv = document.getElementById('debug-info');
+  debugDiv.textContent = 'Loading...';
+  
+  fetch('/debug/csrf/')
+    .then(response => response.json())
+    .then(data => {
+      debugDiv.textContent = JSON.stringify(data, null, 2);
+    })
+    .catch(error => {
+      debugDiv.textContent = 'Error: ' + error.message;
+    });
+}
+
+// Handle form submission
+document.getElementById('test-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const resultDiv = document.getElementById('form-result');
+  resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Submitting...';
+
+  const formData = new FormData(this);
+
+  fetch('/debug/csrf/', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => {
+    console.log('Form response status:', response.status);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  })
+  .then(data => {
+    console.log('Form response data:', data);
+    resultDiv.innerHTML = `
+      <div class="alert alert-success">
+        <strong>Form Success!</strong><br>
+        Status: ${data.status}<br>
+        CSRF Token: ${data.csrf_from_post}<br>
+        Method: ${data.method}
+      </div>
+    `;
+  })
+  .catch(error => {
+    console.error('Form Error:', error);
+    resultDiv.innerHTML = `
+      <div class="alert alert-danger">
+        <strong>Form Error:</strong> ${error.message}<br>
+        <small>Check browser console for details</small>
+      </div>
+    `;
+  });
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  refreshTokens();
+});
+</script>
+{% endblock %}

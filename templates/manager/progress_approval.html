@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Approve Progress - {{ target.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_dashboard' %}">Manager Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_approval_dashboard' %}">Approvals</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Review Progress</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Progress Update Details -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="bi bi-clipboard-check"></i> Progress Update Review
+            <span class="badge bg-warning text-dark ms-2">Pending Approval</span>
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Target Information -->
+          <div class="alert alert-info">
+            <h6 class="alert-heading">{{ target.name }}</h6>
+            <p class="mb-1">{{ target.plan_item.output }}</p>
+            <small class="text-muted">
+              Target: {{ target.value }} {{ target.get_unit_display }} • 
+              Due: {{ target.due_date|date:"M d, Y"|default:"Not specified" }}
+            </small>
+          </div>
+
+          <!-- Progress Data -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h6>Period Information</h6>
+              <table class="table table-sm">
+                <tr>
+                  <td><strong>Period:</strong></td>
+                  <td>{{ progress_update.period_name }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Date Range:</strong></td>
+                  <td>{{ progress_update.period_start|date:"M d" }} - {{ progress_update.period_end|date:"M d, Y" }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Type:</strong></td>
+                  <td>{{ progress_update.get_period_type_display }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h6>Performance Data</h6>
+              <table class="table table-sm">
+                <tr>
+                  <td><strong>Actual Value:</strong></td>
+                  <td>{{ progress_update.actual_value }} {{ target.get_unit_display }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Progress:</strong></td>
+                  <td>{{ progress_update.percentage_complete|floatformat:1 }}% complete</td>
+                </tr>
+                <tr>
+                  <td><strong>RAG Status:</strong></td>
+                  <td><span class="badge bg-{{ progress_update.rag_status|lower }}">{{ progress_update.rag_status }}</span></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Narrative -->
+          <div class="mb-4">
+            <h6>Progress Narrative</h6>
+            <div class="border rounded p-3 bg-light">
+              {{ progress_update.narrative|linebreaks|default:"<em class='text-muted'>No narrative provided</em>" }}
+            </div>
+          </div>
+
+          <!-- Risk Assessment -->
+          {% if progress_update.risk_rating or progress_update.issues or progress_update.corrective_actions %}
+            <div class="mb-4">
+              <h6>Risk Assessment</h6>
+              <div class="row">
+                {% if progress_update.risk_rating %}
+                  <div class="col-md-4">
+                    <strong>Risk Rating:</strong>
+                    <span class="badge bg-secondary">{{ progress_update.get_risk_rating_display }}</span>
+                  </div>
+                {% endif %}
+              </div>
+              {% if progress_update.issues %}
+                <div class="mt-2">
+                  <strong>Issues & Challenges:</strong>
+                  <div class="border rounded p-2 bg-light small">
+                    {{ progress_update.issues|linebreaks }}
+                  </div>
+                </div>
+              {% endif %}
+              {% if progress_update.corrective_actions %}
+                <div class="mt-2">
+                  <strong>Corrective Actions:</strong>
+                  <div class="border rounded p-2 bg-light small">
+                    {{ progress_update.corrective_actions|linebreaks }}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- Forecasting -->
+          {% if progress_update.forecast_value or progress_update.forecast_confidence %}
+            <div class="mb-4">
+              <h6>Forecasting</h6>
+              <div class="row">
+                {% if progress_update.forecast_value %}
+                  <div class="col-md-6">
+                    <strong>Forecast Value:</strong> {{ progress_update.forecast_value }} {{ target.get_unit_display }}
+                  </div>
+                {% endif %}
+                {% if progress_update.forecast_confidence %}
+                  <div class="col-md-6">
+                    <strong>Confidence:</strong> {{ progress_update.get_forecast_confidence_display }}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Evidence Section -->
+          <div class="mb-4">
+            <h6>
+              Supporting Evidence
+              {% if evidence_required %}
+                <span class="badge bg-warning text-dark ms-2">Required</span>
+              {% endif %}
+            </h6>
+            
+            <!-- Evidence Files -->
+            {% if evidence_files %}
+              <div class="mb-3">
+                <strong>Uploaded Files:</strong>
+                <div class="list-group mt-2">
+                  {% for file in evidence_files %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                      <div class="ms-2 me-auto">
+                        <div class="fw-bold">
+                          <i class="{{ file.file_icon }} text-primary"></i>
+                          {{ file.original_filename }}
+                        </div>
+                        {% if file.description %}
+                          <p class="mb-1 small text-muted">{{ file.description }}</p>
+                        {% endif %}
+                        <small class="text-muted">
+                          {{ file.file_size_mb }}MB • 
+                          Uploaded by {{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }} • 
+                          {{ file.uploaded_at|date:"M d, Y H:i" }}
+                        </small>
+                      </div>
+                      <a href="{{ file.file.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-download"></i> Download
+                      </a>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Evidence URLs -->
+            {% if evidence_urls %}
+              <div class="mb-3">
+                <strong>Evidence URLs:</strong>
+                <div class="list-group mt-2">
+                  {% for url_item in evidence_urls %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                      <div class="ms-2 me-auto">
+                        <div class="fw-bold">
+                          <i class="bi bi-link-45deg text-info"></i>
+                          {{ url_item.description|default:"External Link" }}
+                        </div>
+                        <small class="text-muted">
+                          {{ url_item.url|truncatechars:60 }} • 
+                          Added by {{ url_item.added_by|default:"Unknown" }}
+                        </small>
+                      </div>
+                      <a href="{{ url_item.url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-box-arrow-up-right"></i> Open
+                      </a>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            {% if not evidence_files and not evidence_urls %}
+              <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>No Evidence Provided:</strong> This progress update does not include any supporting evidence.
+                {% if evidence_required %}
+                  Evidence is required for this target due to sustained Amber/Red status.
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Approval Form -->
+          <div class="border-top pt-4">
+            <h6>Approval Decision</h6>
+            <form method="post">
+              {% csrf_token %}
+              
+              <div class="mb-3">
+                <label class="form-label">Approval Comments</label>
+                <textarea name="approval_comments" class="form-control" rows="3" 
+                          placeholder="Optional comments about this approval/rejection..."></textarea>
+                <div class="form-text">Provide feedback or comments for the submitter.</div>
+              </div>
+
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'manager_approval_dashboard' %}" class="btn btn-outline-secondary">
+                  <i class="bi bi-arrow-left"></i> Back to Approvals
+                </a>
+                
+                <div>
+                  <button type="submit" name="action" value="reject" class="btn btn-warning me-2">
+                    <i class="bi bi-x-circle"></i> Reject & Return
+                  </button>
+                  <button type="submit" name="action" value="approve" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Approve
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Submission Details -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-info-circle"></i> Submission Details</h6>
+        </div>
+        <div class="card-body">
+          <table class="table table-sm">
+            <tr>
+              <td><strong>Submitted By:</strong></td>
+              <td>{{ progress_update.created_by.get_full_name|default:progress_update.created_by.username }}</td>
+            </tr>
+            <tr>
+              <td><strong>Role:</strong></td>
+              <td>{{ progress_update.created_by.profile.get_primary_role_display|default:"Staff" }}</td>
+            </tr>
+            <tr>
+              <td><strong>Submitted:</strong></td>
+              <td>{{ progress_update.submitted_at|date:"M d, Y H:i" }}</td>
+            </tr>
+            <tr>
+              <td><strong>Time Ago:</strong></td>
+              <td>{{ progress_update.submitted_at|timesince }} ago</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- KPA Information -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-bullseye"></i> KPA Information</h6>
+        </div>
+        <div class="card-body">
+          <h6>{{ target.plan_item.kpa.title }}</h6>
+          <p class="small text-muted">{{ target.plan_item.kpa.description|truncatewords:20 }}</p>
+          
+          <div class="mt-3">
+            <strong>Responsible Officer:</strong><br>
+            <small>{{ target.plan_item.responsible_officer|default:"Not assigned" }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.badge.bg-green { background-color: #28a745 !important; }
+.badge.bg-amber { background-color: #ffc107 !important; color: #000 !important; }
+.badge.bg-red { background-color: #dc3545 !important; }
+.badge.bg-grey { background-color: #6c757d !important; }
+</style>
+{% endblock %}

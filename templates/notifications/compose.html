@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compose Message{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'notification_inbox' %}">Notifications</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Compose Message</li>
+    </ol>
+  </nav>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="bi bi-envelope"></i> Compose New Message
+          </h5>
+        </div>
+        
+        <form method="post" id="compose-form">
+          {% csrf_token %}
+          <div class="card-body">
+            <!-- Recipient Selection Tabs -->
+            <div class="mb-3">
+              <label class="form-label required">Recipients</label>
+
+              <!-- Tab Navigation -->
+              <ul class="nav nav-tabs" id="recipientTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual-recipients" type="button" role="tab">
+                    <i class="bi bi-person"></i> Individual Users
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="orgunit-tab" data-bs-toggle="tab" data-bs-target="#orgunit-recipients" type="button" role="tab">
+                    <i class="bi bi-building"></i> Organizational Units
+                  </button>
+                </li>
+              </ul>
+
+              <!-- Tab Content -->
+              <div class="tab-content border border-top-0 p-3" id="recipientTabContent">
+                <!-- Individual Recipients Tab -->
+                <div class="tab-pane fade show active" id="individual-recipients" role="tabpanel">
+                  <!-- Search Box -->
+                  <div class="mb-3">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="bi bi-search"></i></span>
+                      <input type="text" class="form-control" id="userSearch" placeholder="Search users by name, role, or department...">
+                      <button class="btn btn-outline-secondary" type="button" onclick="clearUserSearch()">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Individual Recipients Select -->
+                  <select class="form-select" id="recipients" name="recipients" multiple size="8">
+                    {% for user in available_users %}
+                      <option value="{{ user.id }}"
+                              data-role="{{ user.profile.get_primary_role_display|default:'N/A' }}"
+                              data-department="{{ user.profile.department|default:'N/A' }}"
+                              data-name="{{ user.get_full_name|lower }}"
+                              data-orgunit="{{ user.profile.staff_member.org_unit.name|default:'N/A'|lower }}">
+                        {{ user.get_full_name }}
+                        {% if user.profile.staff_member.org_unit %}
+                          ({{ user.profile.staff_member.org_unit.name }})
+                        {% else %}
+                          ({{ user.profile.get_primary_role_display|default:'N/A' }})
+                        {% endif %}
+                      </option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">
+                    Hold Ctrl (Cmd on Mac) to select multiple users. Search to find specific users quickly.
+                  </div>
+                </div>
+
+                <!-- Organizational Units Tab -->
+                <div class="tab-pane fade" id="orgunit-recipients" role="tabpanel">
+                  <div class="mb-3">
+                    <div class="form-text mb-2">
+                      <i class="bi bi-info-circle"></i> Select entire organizational units to message all staff members in those units.
+                    </div>
+                    <select class="form-select" id="org_units" name="org_units" multiple size="8">
+                      {% for org_unit in org_units %}
+                        <option value="{{ org_unit.id }}" data-type="{{ org_unit.unit_type }}">
+                          {{ org_unit.name }} ({{ org_unit.get_unit_type_display }})
+                        </option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text">
+                      Hold Ctrl (Cmd on Mac) to select multiple organizational units.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Recipients Summary -->
+              <div id="selected-recipients" class="mt-2"></div>
+            </div>
+
+            <!-- Subject -->
+            <div class="mb-3">
+              <label for="title" class="form-label required">Subject</label>
+              <input type="text" class="form-control" id="title" name="title" required 
+                     placeholder="Enter message subject...">
+            </div>
+
+            <!-- Priority -->
+            <div class="mb-3">
+              <label for="priority" class="form-label">Priority</label>
+              <select class="form-select" id="priority" name="priority">
+                {% for value, label in priority_choices %}
+                  <option value="{{ value }}" {% if value == 'NORMAL' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Message -->
+            <div class="mb-3">
+              <label for="message" class="form-label required">Message</label>
+              <textarea class="form-control" id="message" name="message" rows="8" required 
+                        placeholder="Type your message here..."></textarea>
+              <div class="form-text">
+                <span id="char-count">0</span> characters
+              </div>
+            </div>
+
+            <!-- Options -->
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="requires_acknowledgment" name="requires_acknowledgment">
+                <label class="form-check-label" for="requires_acknowledgment">
+                  Require acknowledgment from recipients
+                </label>
+                <div class="form-text">Recipients will need to acknowledge they have read this message.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'notification_inbox' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x"></i> Cancel
+              </a>
+              
+              <div>
+                <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+                  <i class="bi bi-save"></i> Save Draft
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-send"></i> Send Message
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+      <!-- Message Tips -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Message Tips</h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Be Clear:</strong> Use a descriptive subject line
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Be Concise:</strong> Keep messages focused and brief
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Set Priority:</strong> Use HIGH/URGENT only when necessary
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              <strong>Acknowledgment:</strong> Use for important announcements
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Quick Select -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-people"></i> Quick Select</h6>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="small text-muted">By Role</h6>
+              <div class="d-grid gap-1 mb-3">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectByRole('SENIOR_MANAGER')">
+                  <i class="bi bi-person-badge"></i> Senior Managers
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectByRole('PROGRAMME_MANAGER')">
+                  <i class="bi bi-person-gear"></i> Programme Managers
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-info" onclick="selectByRole('ME_STRATEGY')">
+                  <i class="bi bi-graph-up"></i> M&E / Strategy Staff
+                </button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6 class="small text-muted">By Unit Type</h6>
+              <div class="d-grid gap-1 mb-3">
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="selectOrgUnitsByType('CEO_OFFICE')">
+                  <i class="bi bi-building"></i> CEO Office
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="selectOrgUnitsByType('CHIEF_DIRECTORATE')">
+                  <i class="bi bi-building"></i> Chief Directorates
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="selectOrgUnitsByType('DIRECTORATE')">
+                  <i class="bi bi-building"></i> Directorates
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="d-grid">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllSelections()">
+              <i class="bi bi-x-circle"></i> Clear All Selections
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Contacts -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-clock-history"></i> Recent Contacts</h6>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small">Recent contacts will appear here based on your message history.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const recipientsSelect = document.getElementById('recipients');
+  const orgUnitsSelect = document.getElementById('org_units');
+  const selectedRecipientsDiv = document.getElementById('selected-recipients');
+  const messageTextarea = document.getElementById('message');
+  const charCountSpan = document.getElementById('char-count');
+  const userSearchInput = document.getElementById('userSearch');
+
+  // Character counter
+  messageTextarea.addEventListener('input', function() {
+    charCountSpan.textContent = this.value.length;
+  });
+
+  // Recipients selection display
+  recipientsSelect.addEventListener('change', function() {
+    updateSelectedRecipients();
+  });
+
+  orgUnitsSelect.addEventListener('change', function() {
+    updateSelectedRecipients();
+  });
+
+  // User search functionality
+  userSearchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const options = recipientsSelect.options;
+
+    for (let option of options) {
+      const name = option.dataset.name || '';
+      const role = option.dataset.role.toLowerCase();
+      const department = option.dataset.department.toLowerCase();
+      const orgunit = option.dataset.orgunit || '';
+
+      const matches = name.includes(searchTerm) ||
+                     role.includes(searchTerm) ||
+                     department.includes(searchTerm) ||
+                     orgunit.includes(searchTerm);
+
+      option.style.display = matches ? '' : 'none';
+    }
+  });
+
+  function updateSelectedRecipients() {
+    const selectedUsers = Array.from(recipientsSelect.selectedOptions);
+    const selectedOrgUnits = Array.from(orgUnitsSelect.selectedOptions);
+    selectedRecipientsDiv.innerHTML = '';
+
+    let content = '';
+
+    if (selectedUsers.length > 0) {
+      const userBadges = selectedUsers.map(option => {
+        return `<span class="badge bg-primary me-1 mb-1"><i class="bi bi-person me-1"></i>${option.text}</span>`;
+      }).join('');
+
+      content += `
+        <div class="small text-muted mb-1">Selected users (${selectedUsers.length}):</div>
+        <div class="mb-2">${userBadges}</div>
+      `;
+    }
+
+    if (selectedOrgUnits.length > 0) {
+      const orgUnitBadges = selectedOrgUnits.map(option => {
+        return `<span class="badge bg-success me-1 mb-1"><i class="bi bi-building me-1"></i>${option.text}</span>`;
+      }).join('');
+
+      content += `
+        <div class="small text-muted mb-1">Selected organizational units (${selectedOrgUnits.length}):</div>
+        <div class="mb-2">${orgUnitBadges}</div>
+      `;
+    }
+
+    if (content) {
+      selectedRecipientsDiv.innerHTML = content;
+    }
+  }
+  
+  // Form validation
+  document.getElementById('compose-form').addEventListener('submit', function(e) {
+    const title = document.getElementById('title').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const recipients = recipientsSelect.selectedOptions.length;
+    const orgUnits = orgUnitsSelect.selectedOptions.length;
+
+    if (!title || !message || (recipients === 0 && orgUnits === 0)) {
+      e.preventDefault();
+      alert('Please fill in all required fields and select at least one recipient or organizational unit.');
+      return;
+    }
+
+    // Show loading state
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sending...';
+  });
+});
+
+// Helper functions
+function clearUserSearch() {
+  const userSearchInput = document.getElementById('userSearch');
+  const recipientsSelect = document.getElementById('recipients');
+
+  userSearchInput.value = '';
+
+  // Show all options
+  for (let option of recipientsSelect.options) {
+    option.style.display = '';
+  }
+}
+
+function selectByRole(role) {
+  // Switch to individual recipients tab
+  const individualTab = document.getElementById('individual-tab');
+  const individualTabPane = document.getElementById('individual-recipients');
+  individualTab.click();
+
+  const recipientsSelect = document.getElementById('recipients');
+  const options = recipientsSelect.options;
+
+  // Clear current selection
+  for (let option of options) {
+    option.selected = false;
+  }
+
+  // Select users with the specified role
+  for (let option of options) {
+    if (option.dataset.role && option.dataset.role.includes(role.replace('_', ' '))) {
+      option.selected = true;
+    }
+  }
+
+  updateSelectedRecipients();
+}
+
+function selectOrgUnitsByType(unitType) {
+  // Switch to organizational units tab
+  const orgUnitTab = document.getElementById('orgunit-tab');
+  orgUnitTab.click();
+
+  const orgUnitsSelect = document.getElementById('org_units');
+  const options = orgUnitsSelect.options;
+
+  // Clear current selection
+  for (let option of options) {
+    option.selected = false;
+  }
+
+  // Select organizational units with the specified type
+  for (let option of options) {
+    if (option.dataset.type === unitType) {
+      option.selected = true;
+    }
+  }
+
+  updateSelectedRecipients();
+}
+
+function clearAllSelections() {
+  const recipientsSelect = document.getElementById('recipients');
+  const orgUnitsSelect = document.getElementById('org_units');
+
+  // Clear individual recipients
+  for (let option of recipientsSelect.options) {
+    option.selected = false;
+  }
+
+  // Clear organizational units
+  for (let option of orgUnitsSelect.options) {
+    option.selected = false;
+  }
+
+  updateSelectedRecipients();
+}
+
+function saveDraft() {
+  // TODO: Implement draft saving functionality
+  alert('Draft saving functionality will be implemented in a future update.');
+}
+
+function updateSelectedRecipients() {
+  const recipientsSelect = document.getElementById('recipients');
+  const selectedRecipientsDiv = document.getElementById('selected-recipients');
+  const selected = Array.from(recipientsSelect.selectedOptions);
+  
+  selectedRecipientsDiv.innerHTML = '';
+  
+  if (selected.length > 0) {
+    const badges = selected.map(option => {
+      return `<span class="badge bg-primary me-1 mb-1">${option.text}</span>`;
+    }).join('');
+    
+    selectedRecipientsDiv.innerHTML = `
+      <div class="small text-muted mb-1">Selected recipients (${selected.length}):</div>
+      ${badges}
+    `;
+  }
+}
+</script>
+
+<style>
+.required::after {
+  content: " *";
+  color: red;
+}
+
+#recipients {
+  min-height: 120px;
+}
+
+.badge {
+  font-size: 0.75em;
+}
+</style>
+{% endblock %}

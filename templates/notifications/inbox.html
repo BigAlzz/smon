@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Notifications - Inbox{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="bi bi-bell"></i> Notifications
+      </h1>
+      <p class="text-muted mb-0">Manage your messages and system notifications</p>
+    </div>
+    <div>
+      <a href="{% url 'compose_message' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Compose Message
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">Filter Notifications</h6>
+        </div>
+        <div class="list-group list-group-flush">
+          <a href="?filter=all" class="list-group-item list-group-item-action {% if filter_type == 'all' %}active{% endif %}">
+            <i class="bi bi-inbox"></i> All Messages
+            <span class="badge bg-secondary float-end">{{ total_count }}</span>
+          </a>
+          <a href="?filter=unread" class="list-group-item list-group-item-action {% if filter_type == 'unread' %}active{% endif %}">
+            <i class="bi bi-envelope"></i> Unread
+            <span class="badge bg-primary float-end">{{ unread_count }}</span>
+          </a>
+          <a href="?filter=acknowledged" class="list-group-item list-group-item-action {% if filter_type == 'acknowledged' %}active{% endif %}">
+            <i class="bi bi-check-circle"></i> Acknowledged
+            <span class="badge bg-success float-end">{{ acknowledged_count }}</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6 class="mb-0">Quick Stats</h6>
+        </div>
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-6">
+              <div class="text-primary h4">{{ unread_count }}</div>
+              <small class="text-muted">Unread</small>
+            </div>
+            <div class="col-6">
+              <div class="text-success h4">{{ acknowledged_count }}</div>
+              <small class="text-muted">Acknowledged</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-9">
+      <!-- Search and Actions -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <form method="get" class="row g-3">
+            <div class="col-md-8">
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" name="search" value="{{ search_query }}" 
+                       placeholder="Search notifications...">
+                <input type="hidden" name="filter" value="{{ filter_type }}">
+              </div>
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-search"></i> Search
+              </button>
+              {% if search_query %}
+                <a href="?filter={{ filter_type }}" class="btn btn-outline-secondary">
+                  <i class="bi bi-x"></i> Clear
+                </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Notifications List -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">
+            {% if filter_type == 'unread' %}Unread Messages
+            {% elif filter_type == 'acknowledged' %}Acknowledged Messages
+            {% else %}All Messages{% endif %}
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          {% if page_obj.object_list %}
+            <div class="list-group list-group-flush">
+              {% for notification_recipient in page_obj.object_list %}
+                {% with notification=notification_recipient.notification %}
+                <div class="list-group-item list-group-item-action {% if not notification_recipient.is_read %}list-group-item-light border-start border-primary border-3{% endif %}">
+                  <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <div class="d-flex align-items-center mb-1">
+                        <!-- Priority indicator -->
+                        {% if notification.priority == 'URGENT' %}
+                          <span class="badge bg-danger me-2">URGENT</span>
+                        {% elif notification.priority == 'HIGH' %}
+                          <span class="badge bg-warning me-2">HIGH</span>
+                        {% endif %}
+                        
+                        <!-- Message type icon -->
+                        {% if notification.message_type == 'SYSTEM_ALERT' %}
+                          <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        {% elif notification.message_type == 'APPROVAL_REQUEST' %}
+                          <i class="bi bi-check-circle text-info me-2"></i>
+                        {% elif notification.message_type == 'USER_MESSAGE' %}
+                          <i class="bi bi-person text-primary me-2"></i>
+                        {% else %}
+                          <i class="bi bi-info-circle text-secondary me-2"></i>
+                        {% endif %}
+                        
+                        <h6 class="mb-0">
+                          <a href="{% url 'notification_detail' notification.id %}" class="text-decoration-none">
+                            {{ notification.title }}
+                          </a>
+                        </h6>
+                        
+                        {% if not notification_recipient.is_read %}
+                          <span class="badge bg-primary ms-2">New</span>
+                        {% endif %}
+                      </div>
+                      
+                      <p class="mb-1 text-muted">
+                        {{ notification.message|truncatewords:20 }}
+                      </p>
+                      
+                      <small class="text-muted">
+                        From: {{ notification.sender.get_full_name|default:"System" }} • 
+                        {{ notification.sent_at|timesince }} ago
+                        {% if notification.requires_acknowledgment and not notification_recipient.is_acknowledged %}
+                          • <span class="text-warning"><i class="bi bi-exclamation-circle"></i> Requires acknowledgment</span>
+                        {% endif %}
+                      </small>
+                    </div>
+                    
+                    <div class="text-end">
+                      <small class="text-muted d-block">{{ notification.sent_at|date:"M d, Y" }}</small>
+                      <small class="text-muted">{{ notification.sent_at|time:"H:i" }}</small>
+                    </div>
+                  </div>
+                </div>
+                {% endwith %}
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="bi bi-inbox display-1 text-muted"></i>
+              <h5 class="mt-3">No notifications found</h5>
+              <p class="text-muted">
+                {% if search_query %}
+                  No notifications match your search criteria.
+                {% elif filter_type == 'unread' %}
+                  You have no unread notifications.
+                {% elif filter_type == 'acknowledged' %}
+                  You have no acknowledged notifications.
+                {% else %}
+                  Your inbox is empty.
+                {% endif %}
+              </p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      {% if page_obj.has_other_pages %}
+        <nav aria-label="Notifications pagination" class="mt-3">
+          <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+              </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter_type != 'all' %}&filter={{ filter_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.list-group-item-light {
+  background-color: #f8f9fa;
+}
+
+.border-start {
+  border-left-width: 4px !important;
+}
+
+.notification-unread {
+  font-weight: 500;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Staff User Accounts{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="bi bi-person-lines-fill"></i> Staff User Accounts
+      </h1>
+      <p class="text-muted mb-0">Comprehensive staff and user account management</p>
+      <small class="text-info">Your role: {{ user_capabilities.current_user_role }}</small>
+    </div>
+    <div>
+      {% if user_capabilities.can_create_accounts %}
+      <button class="btn btn-outline-primary me-2" onclick="createUserAccount()">
+        <i class="bi bi-person-plus"></i> Create Account
+      </button>
+      {% endif %}
+      {% if user_capabilities.can_link_accounts %}
+      <button class="btn btn-primary" onclick="linkAccount()">
+        <i class="bi bi-link-45deg"></i> Link Account
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.total_staff }}</h4>
+              <p class="mb-0">Total Staff</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-people display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.staff_with_accounts }}</h4>
+              <p class="mb-0">With User Accounts</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-person-check display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.managers_count }}</h4>
+              <p class="mb-0">Managers</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-person-badge display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.coverage_percentage }}%</h4>
+              <p class="mb-0">Account Coverage</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-graph-up display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Staff with User Accounts -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="bi bi-person-check me-2"></i>Staff Members with User Accounts
+        <span class="badge bg-success ms-2">{{ statistics.staff_with_accounts }}</span>
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      {% if staff_with_users %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Staff Member</th>
+                <th>User Account</th>
+                <th>Organizational Unit</th>
+                <th>Position</th>
+                <th>Manager</th>
+                <th>Account Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for staff in staff_with_users %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="flex-shrink-0">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 35px; height: 35px; font-size: 0.8rem;">
+                          {{ staff.first_name|first|upper }}{{ staff.last_name|first|upper }}
+                        </div>
+                      </div>
+                      <div class="flex-grow-1 ms-3">
+                        <div class="fw-bold">{{ staff.full_name }}</div>
+                        <small class="text-muted">{{ staff.persal_number }}</small>
+                        {% if staff.cell_number %}
+                          <div class="mt-1">
+                            <i class="bi bi-phone text-success me-1"></i>
+                            <small class="text-muted">{{ staff.cell_number }}</small>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {% if staff.user_profile %}
+                      <div>
+                        <strong>{{ staff.user_profile.user.username }}</strong>
+                        <br>
+                        <small class="text-muted">{{ staff.user_profile.user.email }}</small>
+                      </div>
+                    {% else %}
+                      <span class="text-muted">No account linked</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>{{ staff.org_unit.name }}</div>
+                    <small class="text-muted">{{ staff.org_unit.get_unit_type_display }}</small>
+                  </td>
+                  <td>
+                    <div>{{ staff.job_title }}</div>
+                    <small class="text-muted">{{ staff.get_salary_level_display }}</small>
+                  </td>
+                  <td>
+                    {% if staff.is_manager %}
+                      <span class="badge bg-warning text-dark">
+                        <i class="bi bi-person-badge me-1"></i>Manager
+                      </span>
+                    {% else %}
+                      <span class="text-muted">Staff</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if staff.user_profile and staff.user_profile.user.is_active %}
+                      <span class="badge bg-success">
+                        <i class="bi bi-check-circle me-1"></i>Active
+                      </span>
+                    {% elif staff.user_profile %}
+                      <span class="badge bg-danger">
+                        <i class="bi bi-x-circle me-1"></i>Inactive
+                      </span>
+                    {% else %}
+                      <span class="badge bg-secondary">
+                        <i class="bi bi-question-circle me-1"></i>No Account
+                      </span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-person-x display-1 text-muted"></i>
+          <h5 class="mt-3">No staff members found</h5>
+          <p class="text-muted">No staff members have been linked to user accounts yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Users without Staff Links -->
+  {% if users_without_staff %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-person-exclamation me-2"></i>User Accounts without Staff Links
+          <span class="badge bg-warning text-dark ms-2">{{ users_without_staff.count }}</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>User Account</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Last Login</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for user in users_without_staff %}
+                <tr>
+                  <td>
+                    <strong>{{ user.username }}</strong>
+                  </td>
+                  <td>
+                    {{ user.get_full_name|default:"—" }}
+                  </td>
+                  <td>
+                    {{ user.email|default:"—" }}
+                  </td>
+                  <td>
+                    {% if user.is_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if user.last_login %}
+                      {{ user.last_login|date:"M d, Y" }}
+                    {% else %}
+                      <span class="text-muted">Never</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Help Section -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card border-info">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0">
+            <i class="bi bi-info-circle me-2"></i>Account Management
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="small mb-2">To manage staff user accounts:</p>
+          <ul class="small mb-0">
+            <li>All staff members automatically get user accounts</li>
+            <li>Default password is "ChangeMe123!" (must be changed on first login)</li>
+            <li>Managers can access the manager dashboard</li>
+            <li>All staff can update progress on assigned targets</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-warning">
+        <div class="card-header bg-warning text-dark">
+          <h6 class="mb-0">
+            <i class="bi bi-exclamation-triangle me-2"></i>Important Notes
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="small mb-2">Security considerations:</p>
+          <ul class="small mb-0">
+            <li>Users should change default passwords immediately</li>
+            <li>Manager permissions are based on staff records</li>
+            <li>Inactive staff accounts are automatically disabled</li>
+            <li>Contact IT support for account issues</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

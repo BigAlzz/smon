@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organizational Chart (Simple){% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Organizational Chart (Simple Test)</h1>
+  <button class="btn btn-primary btn-sm" id="load-data">Load Data</button>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div id="org-chart-container">
+      <div id="loading" class="text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading organizational data...</p>
+      </div>
+      <div id="data-display" style="display: none;"></div>
+      <div id="error-display" style="display: none;" class="alert alert-danger"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Simple org chart test loaded');
+    
+    function loadData() {
+        console.log('Loading data...');
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('data-display').style.display = 'none';
+        document.getElementById('error-display').style.display = 'none';
+        
+        fetch('/org-chart/data/')
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received:', data);
+                document.getElementById('loading').style.display = 'none';
+                
+                if (data.success) {
+                    displayData(data);
+                } else {
+                    showError('Failed to load data: ' + JSON.stringify(data));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                showError('Error loading data: ' + error.message);
+            });
+    }
+    
+    function displayData(data) {
+        const container = document.getElementById('data-display');
+        container.innerHTML = '<h5>Organizational Data Loaded Successfully!</h5>';
+        container.innerHTML += '<p><strong>Total Units:</strong> ' + data.total_units + '</p>';
+        container.innerHTML += '<h6>Tree Structure:</h6>';
+        container.innerHTML += '<pre>' + JSON.stringify(data.data, null, 2) + '</pre>';
+        container.style.display = 'block';
+    }
+    
+    function showError(message) {
+        const errorDiv = document.getElementById('error-display');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+    
+    // Auto-load on page load
+    loadData();
+    
+    // Manual load button
+    document.getElementById('load-data').addEventListener('click', loadData);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete KPA - {{ kpa.title }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Delete KPA</h1>
+  <a class="btn btn-outline-secondary" href="{% url 'kpa_list' %}"><i class="bi bi-arrow-left"></i> Back to List</a>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card border-danger">
+      <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h5>
+      </div>
+      <div class="card-body">
+        <p class="mb-3">
+          Are you sure you want to delete the KPA <strong>"{{ kpa.title }}"</strong>?
+        </p>
+        
+        {% if plan_items_count > 0 %}
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Warning:</strong> This KPA has {{ plan_items_count }} operational plan item{{ plan_items_count|pluralize }}.
+            Deleting this KPA will also remove all associated plan items, targets, and progress updates.
+          </div>
+        {% endif %}
+
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle"></i>
+          <strong>Note:</strong> This action cannot be undone. All data associated with this KPA will be permanently removed.
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-2">
+            <button type="submit" name="confirm" value="yes" class="btn btn-danger">
+              <i class="bi bi-trash"></i> Yes, Delete KPA
+            </button>
+            <a href="{% url 'kpa_list' %}" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-title mb-0">KPA Details</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row small">
+          <dt class="col-sm-5">Title:</dt>
+          <dd class="col-sm-7">{{ kpa.title }}</dd>
+          
+          <dt class="col-sm-5">Financial Year:</dt>
+          <dd class="col-sm-7">{{ kpa.financial_year.year_code }}</dd>
+          
+          <dt class="col-sm-5">Owner:</dt>
+          <dd class="col-sm-7">{{ kpa.owner.get_full_name|default:kpa.owner.username }}</dd>
+          
+          <dt class="col-sm-5">Order:</dt>
+          <dd class="col-sm-7">{{ kpa.order }}</dd>
+          
+          <dt class="col-sm-5">Status:</dt>
+          <dd class="col-sm-7">
+            {% if kpa.is_active %}
+              <span class="badge bg-success">Active</span>
+            {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+          </dd>
+          
+          <dt class="col-sm-5">Org Units:</dt>
+          <dd class="col-sm-7">
+            {% for unit in kpa.org_units.all %}
+              <span class="badge bg-light text-dark d-block mb-1">{{ unit.name }}</span>
+            {% empty %}
+              <span class="text-muted">None</span>
+            {% endfor %}
+          </dd>
+          
+          <dt class="col-sm-5">Plan Items:</dt>
+          <dd class="col-sm-7">
+            <span class="badge bg-info">{{ plan_items_count }}</span>
+          </dd>
+        </dl>
+        
+        <div class="mt-3">
+          <h6>Description:</h6>
+          <p class="small text-muted">{{ kpa.description|default:"No description provided." }}</p>
+        </div>
+        
+        <div class="mt-3">
+          <h6>Strategic Objective:</h6>
+          <p class="small text-muted">{{ kpa.strategic_objective|default:"No strategic objective provided." }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

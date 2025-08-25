@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} KPA{% if kpa %} - {{ kpa.title }}{% endif %}{% endblock %}
+{% block content %}
+{% load static %}
+<script id="orgunits-data" type="application/json">{{ org_units_data|safe }}</script>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">{{ action }} KPA{% if kpa %}: {{ kpa.title }}{% endif %}</h1>
+  <div class="d-flex gap-2">
+    {% if kpa %}
+      <a class="btn btn-outline-info" href="{% url 'kpa_drilldown' kpa.id %}"><i class="bi bi-eye"></i> View Details</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{% url 'kpa_list' %}"><i class="bi bi-arrow-left"></i> Back to List</a>
+  </div>
+</div>
+<form method="post" class="card card-body shadow-sm">
+  {% csrf_token %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body d-flex align-items-center">
+    <div class="me-3" style="width:10px;height:40px;background:var(--brand);"></div>
+    <div>
+      <div class="small text-muted">KPA Owner</div>
+      <div class="fw-semibold" id="owner-summary">—</div>
+      <div class="small text-muted">Org Unit: <span id="unit-summary">—</span></div>
+    </div>
+  </div>
+</div>
+  <div class="row">
+    <div class="col-md-8">
+      <div class="row g-3">
+        {{ form.title.errors }}
+        <div class="col-12">
+          <label class="form-label required" for="id_title">Title
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="Clear, concise headline for this KPA."></i>
+          </label>
+          {{ form.title }}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="id_org_cdu">CEO Office / Chief Directorate</label>
+          <select id="id_org_cdu" class="form-select" data-org-level="chief"></select>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="id_org_dir">Directorate</label>
+          <select id="id_org_dir" class="form-select" data-org-level="dir"></select>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="id_org_sub">Sub-Directorate</label>
+          <select id="id_org_sub" class="form-select" data-org-level="sub"></select>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="id_description">Description
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="Short summary of the KPA scope and context."></i>
+          </label>
+          {{ form.description }}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="id_strategic_objective">Strategic Objective
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="Which strategic objective(s) this KPA advances."></i>
+          </label>
+          {{ form.strategic_objective }}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="bg-light rounded p-3 mb-3">
+        <div class="mb-3">
+          <label class="form-label required" for="id_financial_year">Financial Year
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="The plan year this KPA belongs to."></i>
+          </label>
+          {{ form.financial_year }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label required" for="id_owner">Owner
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="Senior Manager responsible for the KPA."></i>
+          </label>
+          {{ form.owner }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="id_order">Order
+      <div class="bg-white border rounded p-3 mt-3">
+        <label class="form-label" for="id_org_units">Selected Org Units</label>
+        <div class="small text-muted">Selections from the cascading pickers are shown in the summary above and saved with the KPA.</div>
+        <div class="d-none">{{ form.org_units }}</div>
+      </div>
+            <i class="bi bi-info-circle ms-1" data-bs-toggle="tooltip" title="Controls display ordering on the dashboard."></i>
+          </label>
+          {{ form.order }}
+        </div>
+      <div class="bg-white border rounded p-3 mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong class="text-muted">Preview</strong>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-refresh-preview"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
+        <div id="kpa-preview" class="small">
+          <div><strong>Title:</strong> <span data-preview="title">—</span></div>
+          <div><strong>Year:</strong> <span data-preview="financial_year">—</span> • <strong>Owner:</strong> <span data-preview="owner">—</span></div>
+          <div class="mt-1"><strong>Description:</strong> <span data-preview="description">—</span></div>
+          <div class="mt-1"><strong>Strategic Objective:</strong> <span data-preview="strategic_objective">—</span></div>
+          <div class="mt-1"><strong>Org Units:</strong> <span data-preview="org_units">—</span></div>
+        </div>
+      </div>
+        <div class="form-check mb-3">
+          {{ form.is_active }}
+          <label class="form-check-label" for="id_is_active">Active</label>
+        </div>
+      </div>
+      <div class="bg-light rounded p-3">
+        <label class="form-label" for="id_org_units">Organizational Units</label>
+        {{ form.org_units }}
+        <div class="form-text">Assign Chief/Directorate/Sub-Directorate</div>
+      </div>
+    </div>
+  </div>
+  {% csrf_token %}
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">
+      {% if kpa %}
+        <i class="bi bi-check"></i> Update KPA
+      {% else %}
+        <i class="bi bi-plus"></i> Create KPA
+      {% endif %}
+    </button>
+    <a class="btn btn-outline-secondary" href="{% url 'kpa_list' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+

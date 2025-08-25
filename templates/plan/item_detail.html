@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Item Detail{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h5 mb-0">{{ item.output|truncatechars:80 }}</h1>
+  <a class="btn btn-outline-secondary" href="{% url 'kpa_drilldown' item.kpa_id %}"><i class="bi bi-arrow-left"></i> Back to KPA</a>
+</div>
+
+<ul class="nav nav-tabs" id="itemTabs" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">Overview</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-targets" type="button" role="tab">Targets</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-progress" type="button" role="tab">Progress</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-costs" type="button" role="tab">Costs</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-evidence" type="button" role="tab">Evidence</button></li>
+  <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab">History</button></li>
+</ul>
+<div class="tab-content pt-3">
+  <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+    <div class="row g-3">
+      <div class="col-md-6"><strong>Indicator:</strong> {{ item.indicator }}</div>
+      <div class="col-md-6"><strong>Responsible Officer:</strong> {{ item.responsible_officer }}</div>
+      <div class="col-md-6"><strong>Unit:</strong> {{ item.unit_subdirectorate }}</div>
+      <div class="col-md-6"><strong>Timeframe:</strong> {{ item.timeframe }}</div>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="tab-targets" role="tabpanel">
+    <div class="d-flex justify-content-end mb-2">
+      <a class="btn btn-sm btn-primary" href="{% url 'target_create' item.id %}"><i class="bi bi-plus"></i> Add Target</a>
+    </div>
+    <ul class="list-group">
+      {% for t in targets %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold">{{ t.name }}</div>
+          <div class="small text-muted">Due {{ t.due_date }} • {{ t.get_periodicity_display }}</div>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" href="#">View</a>
+      </li>
+      {% empty %}
+      <li class="list-group-item text-muted">No targets yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="tab-pane fade" id="tab-progress" role="tabpanel">
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr><th>Target</th><th>Period</th><th>Actual</th><th>RAG</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for p in recent_updates %}
+          <tr>
+            <td>{{ p.target.name }}</td>
+            <td>{{ p.period_name }}</td>
+            <td>{{ p.actual_value }}</td>
+            <td>{{ p.rag_status }}</td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'update_wizard' p.target.id %}">Update</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted">No recent updates. Start an update from a target.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="tab-costs" role="tabpanel">Coming soon</div>
+  <div class="tab-pane fade" id="tab-evidence" role="tabpanel">Coming soon</div>
+  <div class="tab-pane fade" id="tab-history" role="tabpanel">Coming soon</div>
+</div>
+{% endblock %}
+

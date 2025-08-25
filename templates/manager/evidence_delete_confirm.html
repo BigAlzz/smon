@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Evidence File - {{ target.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_dashboard' %}">Manager Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_kpa_detail' target.plan_item.kpa.id %}">{{ target.plan_item.kpa.title }}</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'manager_progress_update' target.id %}">Update Progress</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Delete Evidence</li>
+    </ol>
+  </nav>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-exclamation-triangle"></i> Confirm Evidence Deletion
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warning">
+            <i class="bi bi-info-circle"></i>
+            <strong>Warning:</strong> This action cannot be undone. The evidence file will be permanently removed from this progress update.
+          </div>
+
+          <!-- File Information -->
+          <div class="card bg-light mb-4">
+            <div class="card-body">
+              <h6 class="card-title">
+                <i class="{{ evidence_file.file_icon }} text-primary"></i>
+                {{ evidence_file.original_filename }}
+              </h6>
+              
+              {% if evidence_file.description %}
+                <p class="card-text">{{ evidence_file.description }}</p>
+              {% endif %}
+              
+              <div class="row text-muted small">
+                <div class="col-sm-6">
+                  <strong>File Size:</strong> {{ evidence_file.file_size_mb }}MB
+                </div>
+                <div class="col-sm-6">
+                  <strong>File Type:</strong> {{ evidence_file.file_type }}
+                </div>
+                <div class="col-sm-6">
+                  <strong>Uploaded By:</strong> {{ evidence_file.uploaded_by.get_full_name|default:evidence_file.uploaded_by.username }}
+                </div>
+                <div class="col-sm-6">
+                  <strong>Upload Date:</strong> {{ evidence_file.uploaded_at|date:"M d, Y H:i" }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Information -->
+          <div class="mb-4">
+            <h6>Related Target:</h6>
+            <p class="text-muted">{{ target.name }} - {{ target.plan_item.output }}</p>
+          </div>
+
+          <!-- Confirmation Form -->
+          <form method="post">
+            {% csrf_token %}
+            
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'manager_progress_update' target.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+              </a>
+              
+              <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete Evidence File
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Additional Information -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-info-circle"></i> What happens when you delete this file?</h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              The file will be marked as inactive and hidden from the progress update
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              The file data will be preserved for audit purposes
+            </li>
+            <li class="mb-2">
+              <i class="bi bi-check-circle text-success"></i>
+              You can upload a replacement file if needed
+            </li>
+            <li class="mb-0">
+              <i class="bi bi-x-circle text-danger"></i>
+              This action cannot be undone through the user interface
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.card-header.bg-danger {
+  border-color: #dc3545;
+}
+
+.border-danger {
+  border-color: #dc3545 !important;
+}
+</style>
+{% endblock %}

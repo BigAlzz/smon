@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register - KPA Performance Monitoring{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white text-center py-4">
+          <h3 class="mb-0">
+            <i class="bi bi-person-plus-fill me-2"></i>Create Account
+          </h3>
+          <p class="mb-0 small">Join the KPA Performance Monitoring System</p>
+        </div>
+        
+        <div class="card-body p-4">
+          <form method="post" id="registration-form">
+            {% csrf_token %}
+            
+            <!-- Personal Information -->
+            <div class="mb-4">
+              <h6 class="text-muted mb-3">
+                <i class="bi bi-person me-2"></i>Personal Information
+              </h6>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name *</label>
+                  {{ form.first_name }}
+                  {% if form.first_name.errors %}
+                    <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name *</label>
+                  {{ form.last_name }}
+                  {% if form.last_name.errors %}
+                    <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="{{ form.email.id_for_label }}" class="form-label">Email Address *</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                  <div class="text-danger small">{{ form.email.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Account Information -->
+            <div class="mb-4">
+              <h6 class="text-muted mb-3">
+                <i class="bi bi-key me-2"></i>Account Information
+              </h6>
+              
+              <div class="mb-3">
+                <label for="{{ form.username.id_for_label }}" class="form-label">Username *</label>
+                <div class="input-group">
+                  {{ form.username }}
+                  <button type="button" class="btn btn-outline-secondary" id="check-username">
+                    <i class="bi bi-search"></i>
+                  </button>
+                </div>
+                <div id="username-feedback" class="small mt-1"></div>
+                {% if form.username.errors %}
+                  <div class="text-danger small">{{ form.username.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">{{ form.username.help_text }}</div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.password1.id_for_label }}" class="form-label">Password *</label>
+                  {{ form.password1 }}
+                  {% if form.password1.errors %}
+                    <div class="text-danger small">{{ form.password1.errors.0 }}</div>
+                  {% endif %}
+                  <div class="form-text">{{ form.password1.help_text }}</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password *</label>
+                  {{ form.password2 }}
+                  {% if form.password2.errors %}
+                    <div class="text-danger small">{{ form.password2.errors.0 }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Staff Integration -->
+            <div class="mb-4">
+              <h6 class="text-muted mb-3">
+                <i class="bi bi-building me-2"></i>Staff Integration (Optional)
+              </h6>
+              
+              <div class="mb-3">
+                <label for="{{ form.persal_number.id_for_label }}" class="form-label">PERSAL Number</label>
+                <div class="input-group">
+                  {{ form.persal_number }}
+                  <button type="button" class="btn btn-outline-secondary" id="check-persal">
+                    <i class="bi bi-search"></i>
+                  </button>
+                </div>
+                <div id="persal-feedback" class="small mt-1"></div>
+                {% if form.persal_number.errors %}
+                  <div class="text-danger small">{{ form.persal_number.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">{{ form.persal_number.help_text }}</div>
+              </div>
+              
+              <div id="staff-info" class="alert alert-info d-none">
+                <h6 class="alert-heading">Staff Member Found!</h6>
+                <div id="staff-details"></div>
+              </div>
+            </div>
+
+            <!-- Terms and Conditions -->
+            <div class="mb-4">
+              <div class="form-check">
+                {{ form.terms_accepted }}
+                <label class="form-check-label" for="{{ form.terms_accepted.id_for_label }}">
+                  {{ form.terms_accepted.label }} *
+                </label>
+              </div>
+              {% if form.terms_accepted.errors %}
+                <div class="text-danger small">{{ form.terms_accepted.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                <i class="bi bi-person-plus me-2"></i>Create Account
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <div class="card-footer text-center py-3">
+          <p class="mb-0">
+            Already have an account? 
+            <a href="{% url 'login' %}" class="text-decoration-none">Sign in here</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usernameField = document.getElementById('id_username');
+  const checkUsernameBtn = document.getElementById('check-username');
+  const usernameFeedback = document.getElementById('username-feedback');
+  
+  const persalField = document.getElementById('id_persal_number');
+  const checkPersalBtn = document.getElementById('check-persal');
+  const persalFeedback = document.getElementById('persal-feedback');
+  const staffInfo = document.getElementById('staff-info');
+  const staffDetails = document.getElementById('staff-details');
+  
+  const submitBtn = document.getElementById('submit-btn');
+  
+  // Username availability check
+  checkUsernameBtn.addEventListener('click', function() {
+    const username = usernameField.value.trim();
+    if (!username) {
+      usernameFeedback.innerHTML = '<span class="text-warning">Please enter a username</span>';
+      return;
+    }
+    
+    checkUsernameBtn.disabled = true;
+    checkUsernameBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+    
+    fetch(`/accounts/check-username/?username=${encodeURIComponent(username)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.available) {
+          usernameFeedback.innerHTML = `<span class="text-success"><i class="bi bi-check-circle me-1"></i>${data.message}</span>`;
+        } else {
+          usernameFeedback.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>${data.message}</span>`;
+        }
+      })
+      .catch(error => {
+        usernameFeedback.innerHTML = '<span class="text-danger">Error checking username</span>';
+      })
+      .finally(() => {
+        checkUsernameBtn.disabled = false;
+        checkUsernameBtn.innerHTML = '<i class="bi bi-search"></i>';
+      });
+  });
+  
+  // PERSAL number validation
+  checkPersalBtn.addEventListener('click', function() {
+    const persal = persalField.value.trim();
+    if (!persal) {
+      persalFeedback.innerHTML = '<span class="text-warning">Please enter a PERSAL number</span>';
+      return;
+    }
+    
+    checkPersalBtn.disabled = true;
+    checkPersalBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+    
+    fetch(`/accounts/check-persal/?persal=${encodeURIComponent(persal)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.valid) {
+          persalFeedback.innerHTML = `<span class="text-success"><i class="bi bi-check-circle me-1"></i>${data.message}</span>`;
+          
+          // Show staff information
+          if (data.staff_info) {
+            staffDetails.innerHTML = `
+              <p class="mb-1"><strong>Name:</strong> ${data.staff_info.name}</p>
+              <p class="mb-1"><strong>Position:</strong> ${data.staff_info.job_title}</p>
+              <p class="mb-0"><strong>Unit:</strong> ${data.staff_info.unit}</p>
+            `;
+            staffInfo.classList.remove('d-none');
+          }
+        } else {
+          persalFeedback.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>${data.message}</span>`;
+          staffInfo.classList.add('d-none');
+        }
+      })
+      .catch(error => {
+        persalFeedback.innerHTML = '<span class="text-danger">Error checking PERSAL number</span>';
+        staffInfo.classList.add('d-none');
+      })
+      .finally(() => {
+        checkPersalBtn.disabled = false;
+        checkPersalBtn.innerHTML = '<i class="bi bi-search"></i>';
+      });
+  });
+  
+  // Form submission handling
+  document.getElementById('registration-form').addEventListener('submit', function(e) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split spinner-border spinner-border-sm me-2"></i>Creating Account...';
+    
+    // Re-enable after 10 seconds as fallback
+    setTimeout(() => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="bi bi-person-plus me-2"></i>Create Account';
+    }, 10000);
+  });
+  
+  // Auto-check username on blur
+  usernameField.addEventListener('blur', function() {
+    if (this.value.trim() && this.value.length >= 3) {
+      checkUsernameBtn.click();
+    }
+  });
+  
+  // Auto-check PERSAL on blur
+  persalField.addEventListener('blur', function() {
+    if (this.value.trim()) {
+      checkPersalBtn.click();
+    }
+  });
+});
+</script>
+
+<style>
+.card {
+  border-radius: 15px;
+}
+
+.card-header {
+  border-radius: 15px 15px 0 0 !important;
+}
+
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn-outline-secondary:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+#staff-info {
+  border-left: 4px solid #0dcaf0;
+}
+
+.input-group .btn {
+  border-left: 0;
+}
+
+.input-group .form-control:focus + .btn {
+  border-color: #0d6efd;
+}
+</style>
+{% endblock %}

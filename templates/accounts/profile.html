@@ -1,0 +1,579 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile - KPA Monitoring{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">My Profile</h1>
+      <p class="text-muted mb-0">Manage your personal information and preferences</p>
+    </div>
+    <div class="btn-group" role="group">
+      <a href="{% url 'change_password' %}" class="btn btn-outline-primary">
+        <i class="bi bi-key"></i> Change Password
+      </a>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-house"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Profile Overview -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <!-- Profile Picture -->
+          <div class="mb-3">
+            {% if user_profile.profile_picture %}
+              <img src="{{ user_profile.profile_picture.url }}"
+                   alt="Profile Picture"
+                   class="rounded-circle"
+                   style="width: 100px; height: 100px; object-fit: cover;">
+            {% else %}
+              <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                   style="width: 100px; height: 100px; font-size: 2rem; color: white;">
+                {{ user.first_name.0|default:user.username.0|upper }}{{ user.last_name.0|default:""|upper }}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Profile Picture Upload -->
+          <div class="mb-3">
+            <form method="post" enctype="multipart/form-data" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="picture">
+              <div class="input-group input-group-sm">
+                {{ picture_form.profile_picture }}
+                <button type="submit" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-upload"></i> Upload
+                </button>
+              </div>
+              {% if picture_form.profile_picture.errors %}
+                <div class="invalid-feedback d-block">{{ picture_form.profile_picture.errors.0 }}</div>
+              {% endif %}
+            </form>
+          </div>
+
+          <h5 class="card-title">{{ user.get_full_name|default:user.username }}</h5>
+          <p class="text-muted">{{ user_profile.job_title|default:"No job title set" }}</p>
+          <p class="small text-muted">{{ user_profile.department|default:"No department set" }}</p>
+
+          <!-- Role Badge -->
+          <span class="badge bg-primary mb-3">{{ user_profile.get_primary_role_display }}</span>
+
+          <!-- Contact Information -->
+          {% if user_profile.phone_number or user_profile.mobile_number %}
+          <div class="mb-3">
+            <h6 class="text-muted mb-2">
+              <i class="bi bi-telephone me-1"></i>Contact Information
+            </h6>
+            {% if user_profile.mobile_number %}
+              <div class="mb-1">
+                <i class="bi bi-phone text-success me-1"></i>
+                <a href="tel:{{ user_profile.mobile_number }}" class="text-decoration-none">
+                  {{ user_profile.mobile_number }}
+                </a>
+                <small class="text-muted">(Mobile)</small>
+              </div>
+            {% endif %}
+            {% if user_profile.phone_number %}
+              <div class="mb-1">
+                <i class="bi bi-telephone text-primary me-1"></i>
+                <a href="tel:{{ user_profile.phone_number }}" class="text-decoration-none">
+                  {{ user_profile.phone_number }}
+                </a>
+                <small class="text-muted">(Phone)</small>
+              </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Quick Stats -->
+          <div class="row text-center">
+            <div class="col-4">
+              <div class="border-end">
+                <div class="h5 mb-0 text-primary">{{ user_stats.kpas_count }}</div>
+                <small class="text-muted">KPAs</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="border-end">
+                <div class="h5 mb-0 {% if user_stats.is_manager %}text-success{% else %}text-muted{% endif %}">
+                  {% if user_stats.is_manager %}<i class="bi bi-check"></i>{% else %}<i class="bi bi-dash"></i>{% endif %}
+                </div>
+                <small class="text-muted">Manager</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="h5 mb-0 {% if user_stats.can_approve %}text-success{% else %}text-muted{% endif %}">
+                {% if user_stats.can_approve %}<i class="bi bi-check"></i>{% else %}<i class="bi bi-dash"></i>{% endif %}
+              </div>
+              <small class="text-muted">Approver</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Information -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-info-circle"></i> Account Information</h6>
+        </div>
+        <div class="card-body">
+          <dl class="row small">
+            <dt class="col-sm-5">Username:</dt>
+            <dd class="col-sm-7">{{ user.username }}</dd>
+
+            <dt class="col-sm-5">Email:</dt>
+            <dd class="col-sm-7">{{ user.email|default:"Not set" }}</dd>
+
+            <dt class="col-sm-5">Employee #:</dt>
+            <dd class="col-sm-7">{{ user_profile.employee_number|default:"Not set" }}</dd>
+
+            <dt class="col-sm-5">Joined:</dt>
+            <dd class="col-sm-7">{{ user.date_joined|date:"M d, Y" }}</dd>
+
+            <dt class="col-sm-5">Last Login:</dt>
+            <dd class="col-sm-7">{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</dd>
+
+            <dt class="col-sm-5">Status:</dt>
+            <dd class="col-sm-7">
+              {% if user.is_active %}
+                <span class="badge bg-success">Active</span>
+              {% else %}
+                <span class="badge bg-danger">Inactive</span>
+              {% endif %}
+            </dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Forms -->
+    <div class="col-lg-8">
+      <!-- Profile Information Form -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-person"></i> Personal & Professional Information</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" id="profile-form">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="profile">
+
+            <!-- Error Summary -->
+            {% if profile_form.errors %}
+            <div class="form-errors-summary">
+              <h6><i class="bi bi-exclamation-triangle"></i> Please correct the following errors:</h6>
+              <ul>
+                {% for field, errors in profile_form.errors.items %}
+                  {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+              <!-- Personal Information -->
+              <div class="col-12">
+                <h6 class="text-primary border-bottom pb-2 mb-3">Personal Information</h6>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label required">First Name</label>
+                {{ profile_form.first_name }}
+                {% if profile_form.first_name.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.first_name.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label required">Last Name</label>
+                {{ profile_form.last_name }}
+                {% if profile_form.last_name.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.last_name.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label required">Email Address</label>
+                {{ profile_form.email }}
+                {% if profile_form.email.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.email.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Employee Number</label>
+                {{ profile_form.employee_number }}
+                {% if profile_form.employee_number.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.employee_number.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">{{ profile_form.employee_number.help_text }}</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Primary Role</label>
+                <input type="text" class="form-control" value="{{ user_profile.get_primary_role_display|default:'No role assigned' }}" readonly>
+                <div class="form-text">Contact an administrator to change your role</div>
+                <!-- Hidden field to preserve the role value -->
+                {{ profile_form.primary_role }}
+              </div>
+
+              <!-- Professional Information -->
+              <div class="col-12 mt-4">
+                <h6 class="text-primary border-bottom pb-2 mb-3">Professional Information</h6>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Job Title</label>
+                {{ profile_form.job_title }}
+                {% if profile_form.job_title.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.job_title.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Department</label>
+                {{ profile_form.department }}
+                {% if profile_form.department.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.department.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Unit/Sub-Directorate</label>
+                {{ profile_form.unit_subdirectorate }}
+                {% if profile_form.unit_subdirectorate.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.unit_subdirectorate.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Office Location</label>
+                {{ profile_form.office_location }}
+                {% if profile_form.office_location.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.office_location.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <!-- Contact Information -->
+              <div class="col-12 mt-4">
+                <h6 class="text-primary border-bottom pb-2 mb-3">Contact Information</h6>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Phone Number</label>
+                {{ profile_form.phone_number }}
+                {% if profile_form.phone_number.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.phone_number.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Mobile Number</label>
+                {{ profile_form.mobile_number }}
+                {% if profile_form.mobile_number.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.mobile_number.errors.0 }}</div>
+                {% endif %}
+              </div>
+
+              <!-- Management Information -->
+              <div class="col-12 mt-4">
+                <h6 class="text-primary border-bottom pb-2 mb-3">Management Structure</h6>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Line Manager</label>
+                {{ profile_form.line_manager }}
+                {% if profile_form.line_manager.errors %}
+                  <div class="invalid-feedback d-block">{{ profile_form.line_manager.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">{{ profile_form.line_manager.help_text }}</div>
+              </div>
+
+              <!-- Notifications -->
+              <div class="col-12 mt-4">
+                <h6 class="text-primary border-bottom pb-2 mb-3">Notification Settings</h6>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  {{ profile_form.email_notifications }}
+                  <label class="form-check-label" for="{{ profile_form.email_notifications.id_for_label }}">
+                    Email Notifications
+                  </label>
+                  <div class="form-text">{{ profile_form.email_notifications.help_text }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end mt-4">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check"></i> Save Profile Information
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Dashboard Preferences -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-gear"></i> Dashboard Preferences</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" id="preferences-form">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="preferences">
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Default Landing Page</label>
+                {{ preferences_form.default_view }}
+                <div class="form-text">{{ preferences_form.default_view.help_text }}</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Items Per Page</label>
+                {{ preferences_form.items_per_page }}
+                <div class="form-text">{{ preferences_form.items_per_page.help_text }}</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Email Digest Frequency</label>
+                {{ preferences_form.email_digest_frequency }}
+                <div class="form-text">{{ preferences_form.email_digest_frequency.help_text }}</div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Theme Preference</label>
+                {{ preferences_form.theme_preference }}
+                <div class="form-text">{{ preferences_form.theme_preference.help_text }}</div>
+              </div>
+
+              <div class="col-12">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      {{ preferences_form.show_completed }}
+                      <label class="form-check-label" for="{{ preferences_form.show_completed.id_for_label }}">
+                        Show Completed Items
+                      </label>
+                      <div class="form-text">{{ preferences_form.show_completed.help_text }}</div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      {{ preferences_form.show_inactive }}
+                      <label class="form-check-label" for="{{ preferences_form.show_inactive.id_for_label }}">
+                        Show Inactive Items
+                      </label>
+                      <div class="form-text">{{ preferences_form.show_inactive.help_text }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end mt-4">
+              <button type="submit" class="btn btn-success">
+                <i class="bi bi-check"></i> Save Preferences
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Accessible KPAs -->
+      {% if accessible_kpas %}
+        <div class="card mt-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-target"></i> Your KPAs</h5>
+            <span class="badge bg-primary">{{ total_accessible_kpas }} total</span>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              {% for kpa in accessible_kpas %}
+                <div class="col-md-6 mb-3">
+                  <div class="card border-start border-primary border-3">
+                    <div class="card-body p-3">
+                      <h6 class="card-title mb-1">
+                        <a href="{% url 'kpa_drilldown' kpa.id %}" class="text-decoration-none">
+                          {{ kpa.title }}
+                        </a>
+                      </h6>
+                      <p class="card-text small text-muted mb-2">{{ kpa.strategic_objective|truncatewords:12 }}</p>
+                      <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">{{ kpa.financial_year.year_code }}</small>
+                        <div class="btn-group btn-group-sm">
+                          <a href="{% url 'kpa_drilldown' kpa.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View
+                          </a>
+                          {% if user_stats.is_manager and kpa.owner == user %}
+                            <a href="{% url 'manager_kpa_detail' kpa.id %}" class="btn btn-outline-success btn-sm">
+                              <i class="bi bi-speedometer2"></i> Manage
+                            </a>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+            {% if total_accessible_kpas > accessible_kpas|length %}
+              <div class="text-center mt-3">
+                <a href="{% url 'kpa_list' %}" class="btn btn-outline-primary">
+                  <i class="bi bi-list"></i> View All {{ total_accessible_kpas }} KPAs
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <div class="card mt-4">
+          <div class="card-body text-center py-4">
+            <i class="bi bi-target display-1 text-muted"></i>
+            <h5 class="mt-3">No KPAs Assigned</h5>
+            <p class="text-muted">You don't have access to any KPAs yet. Contact your administrator to get assigned to KPAs.</p>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Recent Activity -->
+      {% if recent_logs %}
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Activity</h5>
+          </div>
+          <div class="card-body">
+            <div class="timeline">
+              {% for log in recent_logs %}
+                <div class="timeline-item mb-3">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <div class="timeline-marker
+                                  {% if log.action == 'LOGIN' %}bg-success
+                                  {% elif log.action == 'CREATE' %}bg-primary
+                                  {% elif log.action == 'UPDATE' %}bg-warning
+                                  {% elif log.action == 'DELETE' %}bg-danger
+                                  {% else %}bg-secondary{% endif %}"></div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                      <div class="timeline-content">
+                        <h6 class="mb-1">{{ log.get_action_display|default:log.action }}</h6>
+                        <p class="mb-1 small">{{ log.object_repr|default:"System action" }}</p>
+                        <small class="text-muted">
+                          {{ log.timestamp|timesince }} ago
+                          {% if log.user_ip_address %} • {{ log.user_ip_address }}{% endif %}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.required::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.border-start {
+  border-left-width: 4px !important;
+}
+
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.btn-group-sm > .btn, .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.timeline-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+
+.timeline-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 16px;
+  width: 2px;
+  height: calc(100% - 16px);
+  background-color: #dee2e6;
+}
+
+.timeline {
+  position: relative;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Form validation feedback
+  const forms = document.querySelectorAll('form');
+  forms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+      }
+    });
+  });
+
+  // Auto-save preferences on change (optional)
+  const preferencesForm = document.getElementById('preferences-form');
+  if (preferencesForm) {
+    const inputs = preferencesForm.querySelectorAll('select, input[type="checkbox"]');
+    inputs.forEach(input => {
+      input.addEventListener('change', function() {
+        // Add visual feedback that changes are pending
+        const saveBtn = preferencesForm.querySelector('button[type="submit"]');
+        if (saveBtn) {
+          saveBtn.classList.remove('btn-success');
+          saveBtn.classList.add('btn-warning');
+          saveBtn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Save Changes';
+        }
+      });
+    });
+  }
+});
+</script>
+{% endblock %}
+

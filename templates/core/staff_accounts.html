@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Staff User Accounts{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="bi bi-person-lines-fill"></i> Staff User Accounts
+      </h1>
+      <p class="text-muted mb-0">Comprehensive staff and user account management</p>
+      <small class="text-info">Your role: {{ user_capabilities.current_user_role }}</small>
+    </div>
+    <div>
+      {% if user_capabilities.can_create_accounts %}
+      <button class="btn btn-outline-primary me-2" onclick="createUserAccount()">
+        <i class="bi bi-person-plus"></i> Create Account
+      </button>
+      {% endif %}
+      {% if user_capabilities.can_link_accounts %}
+      <button class="btn btn-primary" onclick="linkAccount()">
+        <i class="bi bi-link-45deg"></i> Link Account
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.total_staff }}</h4>
+              <p class="mb-0">Total Staff</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-people display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.staff_with_accounts }}</h4>
+              <p class="mb-0">With Accounts</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-person-check display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-dark">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.staff_without_accounts }}</h4>
+              <p class="mb-0">Without Accounts</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-person-x display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h4 class="mb-0">{{ statistics.coverage_percentage }}%</h4>
+              <p class="mb-0">Coverage Rate</p>
+            </div>
+            <div class="align-self-center">
+              <i class="bi bi-graph-up display-4"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h6 class="mb-0">
+        <i class="bi bi-funnel"></i> Filters & Search
+      </h6>
+    </div>
+    <div class="card-body">
+      <form method="get" class="row g-3">
+        <div class="col-md-3">
+          <label for="unit" class="form-label">Organizational Unit</label>
+          <select name="unit" id="unit" class="form-select">
+            <option value="">All Units</option>
+            {% for unit in org_units %}
+              <option value="{{ unit.id }}" {% if current_filters.unit == unit.id|stringformat:"s" %}selected{% endif %}>
+                {{ unit.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="account_status" class="form-label">Account Status</label>
+          <select name="account_status" id="account_status" class="form-select">
+            <option value="all" {% if current_filters.account_status == 'all' %}selected{% endif %}>All Staff</option>
+            <option value="linked" {% if current_filters.account_status == 'linked' %}selected{% endif %}>With User Accounts</option>
+            <option value="unlinked" {% if current_filters.account_status == 'unlinked' %}selected{% endif %}>Without User Accounts</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="search" class="form-label">Search</label>
+          <input type="text" name="search" id="search" class="form-control" 
+                 placeholder="Name, PERSAL, job title, username..." 
+                 value="{{ current_filters.search }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">&nbsp;</label>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-search"></i> Filter
+            </button>
+            <a href="?" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle"></i> Clear
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Staff List -->
+  <div class="card">
+    <div class="card-header">
+      <h6 class="mb-0">
+        Staff Members
+        {% if page_obj.paginator.count %}
+          ({{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }})
+        {% endif %}
+      </h6>
+    </div>
+    <div class="card-body p-0">
+      {% if page_obj.object_list %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>
+                  <a href="?{% if current_filters.sort == 'name' and current_filters.order != 'desc' %}sort=name&order=desc{% else %}sort=name&order=asc{% endif %}{% for key, value in current_filters.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                    Staff Member
+                    {% if current_filters.sort == 'name' %}
+                      <i class="bi bi-chevron-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                    {% endif %}
+                  </a>
+                </th>
+                <th>
+                  <a href="?{% if current_filters.sort == 'job_title' and current_filters.order != 'desc' %}sort=job_title&order=desc{% else %}sort=job_title&order=asc{% endif %}{% for key, value in current_filters.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                    Position
+                    {% if current_filters.sort == 'job_title' %}
+                      <i class="bi bi-chevron-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                    {% endif %}
+                  </a>
+                </th>
+                <th>
+                  <a href="?{% if current_filters.sort == 'org_unit' and current_filters.order != 'desc' %}sort=org_unit&order=desc{% else %}sort=org_unit&order=asc{% endif %}{% for key, value in current_filters.items %}{% if key != 'sort' and key != 'order' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="text-decoration-none text-dark d-flex align-items-center">
+                    Unit
+                    {% if current_filters.sort == 'org_unit' %}
+                      <i class="bi bi-chevron-{% if current_filters.order == 'desc' %}down{% else %}up{% endif %} ms-1"></i>
+                    {% endif %}
+                  </a>
+                </th>
+                <th>User Account</th>
+                <th>Contact</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for staff in page_obj.object_list %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="flex-shrink-0">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                             style="width: 40px; height: 40px; font-size: 0.9rem;">
+                          {{ staff.first_name|first|upper }}{{ staff.last_name|first|upper }}
+                        </div>
+                      </div>
+                      <div class="flex-grow-1 ms-3">
+                        <div class="fw-bold">{{ staff.full_name }}</div>
+                        <small class="text-muted">{{ staff.persal_number }}</small>
+                        {% if staff.is_manager %}
+                          <span class="badge bg-warning text-dark ms-2">Manager</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="fw-bold">{{ staff.job_title }}</div>
+                    {% if staff.salary_level %}
+                      <small class="text-muted">Level {{ staff.salary_level }}</small>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>{{ staff.org_unit.name }}</div>
+                    <small class="text-muted">{{ staff.org_unit.get_unit_type_display }}</small>
+                  </td>
+                  <td>
+                    {% if staff.user_profile %}
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        <div>
+                          <div class="fw-bold">{{ staff.user_profile.user.username }}</div>
+                          <small class="text-muted">{{ staff.user_profile.user.email }}</small>
+                        </div>
+                      </div>
+                    {% else %}
+                      <div class="d-flex align-items-center text-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span>No Account</span>
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if staff.cell_number %}
+                      <div>
+                        <i class="bi bi-phone text-success me-1"></i>
+                        <a href="tel:{{ staff.cell_number }}" class="text-decoration-none small">
+                          {{ staff.cell_number }}
+                        </a>
+                      </div>
+                    {% endif %}
+                    {% if staff.email %}
+                      <div>
+                        <i class="bi bi-envelope text-primary me-1"></i>
+                        <a href="mailto:{{ staff.email }}" class="text-decoration-none small">
+                          {{ staff.email }}
+                        </a>
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="btn-group" role="group">
+                      {% if staff.user_profile %}
+                        <!-- User has account - show account management actions -->
+                        {% if user_capabilities.can_edit_profiles %}
+                          <a href="{% url 'admin_edit_user' staff.user_profile.user.id %}" 
+                             class="btn btn-outline-primary btn-sm" title="Edit Profile">
+                            <i class="bi bi-person-gear"></i>
+                          </a>
+                        {% endif %}
+                        {% if user_capabilities.can_reset_passwords %}
+                          <button class="btn btn-outline-warning btn-sm" 
+                                  onclick="resetPassword('{{ staff.user_profile.user.id }}', '{{ staff.full_name }}')" 
+                                  title="Reset Password">
+                            <i class="bi bi-key"></i>
+                          </button>
+                        {% endif %}
+                      {% else %}
+                        <!-- No user account - show account creation actions -->
+                        {% if user_capabilities.can_create_accounts %}
+                          <button class="btn btn-outline-success btn-sm" 
+                                  onclick="createAccountForStaff('{{ staff.id }}', '{{ staff.full_name }}', '{{ staff.persal_number }}')" 
+                                  title="Create User Account">
+                            <i class="bi bi-person-plus"></i>
+                          </button>
+                        {% endif %}
+                      {% endif %}
+                      
+                      <!-- Staff detail view -->
+                      <a href="{% url 'staff_detail' staff.id %}" 
+                         class="btn btn-outline-info btn-sm" title="View Details">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                      
+                      <!-- Edit phone number -->
+                      <button class="btn btn-outline-secondary btn-sm" 
+                              onclick="editPhone('{{ staff.id }}', '{{ staff.full_name }}', '{{ staff.cell_number|default:'' }}')" 
+                              title="Edit Phone">
+                        <i class="bi bi-telephone"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-people display-1 text-muted"></i>
+          <h5 class="mt-3 text-muted">No Staff Members Found</h5>
+          <p class="text-muted">No staff members match your current filter criteria.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+    <nav aria-label="Staff pagination" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">
+              Previous
+            </a>
+          </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <li class="page-item active">
+              <span class="page-link">{{ num }}</span>
+            </li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">{{ num }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}&{{ key }}={{ value }}{% endfor %}">
+              Next
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Action functions for staff management
+function createUserAccount() {
+  alert('Create user account functionality will be implemented.');
+}
+
+function linkAccount() {
+  alert('Link account functionality will be implemented.');
+}
+
+function createAccountForStaff(staffId, staffName, persalNumber) {
+  if (confirm(`Create user account for ${staffName} (${persalNumber})?`)) {
+    // Redirect to user creation with pre-filled staff info
+    window.location.href = `/accounts/users/create/?staff_id=${staffId}`;
+  }
+}
+
+function resetPassword(userId, staffName) {
+  if (confirm(`Reset password for ${staffName}?`)) {
+    // Redirect to password reset
+    window.location.href = `/accounts/users/${userId}/edit/#password`;
+  }
+}
+
+function editPhone(staffId, staffName, currentPhone) {
+  const newPhone = prompt(`Edit phone number for ${staffName}:`, currentPhone);
+  if (newPhone !== null && newPhone !== currentPhone) {
+    // Submit phone update
+    window.location.href = `/staff/${staffId}/edit-phone/?phone=${encodeURIComponent(newPhone)}`;
+  }
+}
+</script>
+{% endblock %}
